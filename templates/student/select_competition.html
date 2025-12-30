@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}选择竞赛 - 创建项目{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>创建新项目</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>第一步：选择竞赛</h2>
+    </div>
+    <div class="card-body">
+        {% if competitions %}
+        <form method="POST" action="{{ url_for('student.create_project_select_competition') }}" class="auth-form">
+            <div class="form-group">
+                <label for="competition_id" class="form-label">请选择竞赛</label>
+                <select name="competition_id" id="competition_id" class="form-control" required>
+                    <option value="">请选择竞赛</option>
+                    {% for competition in competitions %}
+                    <option value="{{ competition.id }}">{{ competition.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-block">下一步：填写项目信息</button>
+            </div>
+        </form>
+        {% else %}
+        <div class="empty-state">
+            <p>当前没有可用的竞赛，请等待校级管理员发布竞赛</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+

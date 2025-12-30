@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}项目列表 - 学院管理员{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h1>项目列表</h1>
+        <p class="subtitle">{{ current_user.college }} - 已通过学院审核的项目</p>
+    </div>
+    <div>
+        <a href="{{ url_for('college_admin.export_projects') }}" class="btn btn-primary">
+            <span style="margin-right: 5px;">📥</span>导出Excel
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('college_admin.projects') }}" class="filter-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto auto; gap: var(--spacing-md); align-items: end;">
+                <div class="form-group">
+                    <label class="form-label">项目名称</label>
+                    <input type="text" name="project_name" class="form-control" value="{{ request.args.get('project_name', '') }}" placeholder="输入项目名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">赛道</label>
+                    <select name="track_id" class="form-control">
+                        <option value="">全部</option>
+                        {% for competition in competitions %}
+                            {% for track in competition.tracks %}
+                                <option value="{{ track.id }}" {% if request.args.get('track_id') and request.args.get('track_id')|int == track.id %}selected{% endif %}>
+                                    {{ competition.name }} - {{ track.name }}
+                                </option>
+                            {% endfor %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">状态</label>
+                    <select name="status" class="form-control">
+                        <option value="">全部</option>
+                        <option value="college_approved" {% if request.args.get('status') == 'college_approved' %}selected{% endif %}>学院已通过，学校审核中</option>
+                        <option value="final_rejected" {% if request.args.get('status') == 'final_rejected' %}selected{% endif %}>学校审核不通过</option>
+                        <option value="final_approved" {% if request.args.get('status') == 'final_approved' %}selected{% endif %}>学校已通过</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                    <button type="submit" class="btn btn-primary">搜索</button>
+                    <a href="{{ url_for('college_admin.projects') }}" class="btn btn-secondary">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if projects %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 180px;">状态</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">提交时间</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if project.status == 'draft' %}
+                                <span class="badge badge-warning">草稿</span>
+                            {% elif project.status == 'submitted' %}
+                                <span class="badge badge-info">学院审核中</span>
+                            {% elif project.status == 'college_rejected' %}
+                                <span class="badge badge-error">不通过</span>
+                            {% elif project.status == 'college_approved' %}
+                                <span class="badge badge-success">学院已通过，学校审核中</span>
+                            {% elif project.status == 'final_rejected' %}
+                                <span class="badge badge-error">学校审核不通过</span>
+                            {% elif project.status == 'final_approved' %}
+                                <span class="badge badge-success">学校已通过</span>
+                            {% else %}
+                                <span class="badge">{{ project.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <a href="{{ url_for('college_admin.review_project', project_id=project.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">查看/审核</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>没有找到符合条件的项目</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

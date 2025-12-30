@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}项目详情 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>项目详情</h1>
+    <div>
+        <a href="{{ url_for('judge.score_project', project_id=project.id) }}" class="btn btn-primary">打分</a>
+        <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+    </div>
+</div>
+
+<div class="project-detail">
+    <div class="project-detail-section">
+        <h3>项目基本信息</h3>
+        <div class="detail-row">
+            <div class="detail-label">项目名称：</div>
+            <div class="detail-value">{{ project.title }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">竞赛：</div>
+            <div class="detail-value">{{ project.competition.name }}</div>
+        </div>
+        {% if project.project_category %}
+        <div class="detail-row">
+            <div class="detail-label">项目组别：</div>
+            <div class="detail-value">{{ project.project_category }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_type %}
+        <div class="detail-row">
+            <div class="detail-label">作品类别：</div>
+            <div class="detail-value">{{ project.project_type }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_field %}
+        <div class="detail-row">
+            <div class="detail-label">项目领域：</div>
+            <div class="detail-value">{{ project.project_field }}</div>
+        </div>
+        {% endif %}
+        {% if project.push_college %}
+        <div class="detail-row">
+            <div class="detail-label">作品推送学院：</div>
+            <div class="detail-value">{{ project.push_college }}</div>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <div class="detail-label">队长：</div>
+            <div class="detail-value">{{ project.team.leader.real_name }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">队长学工号：</div>
+            <div class="detail-value">{{ project.team.leader.work_id or '未设置' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">学院：</div>
+            <div class="detail-value">{{ project.team.leader.college or '未设置' }}</div>
+        </div>
+    </div>
+
+    {% if project.instructor_name or project.instructor_work_id or project.instructor_unit or project.instructor_phone %}
+    <div class="project-detail-section">
+        <h3>指导教师信息</h3>
+        {% if project.instructor_name %}
+        <div class="detail-row">
+            <div class="detail-label">姓名：</div>
+            <div class="detail-value">{{ project.instructor_name }}</div>
+        </div>
+        {% endif %}
+        {% if project.instructor_work_id %}
+        <div class="detail-row">
+            <div class="detail-label">学工号：</div>
+            <div class="detail-value">{{ project.instructor_work_id }}</div>
+        </div>
+        {% endif %}
+        {% if project.instructor_unit %}
+        <div class="detail-row">
+            <div class="detail-label">单位：</div>
+            <div class="detail-value">{{ project.instructor_unit }}</div>
+        </div>
+        {% endif %}
+        {% if project.instructor_phone %}
+        <div class="detail-row">
+            <div class="detail-label">联系方式：</div>
+            <div class="detail-value">{{ project.instructor_phone }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="project-detail-section">
+        <h3>项目简介</h3>
+        <p style="white-space: pre-wrap;">{{ project.description }}</p>
+    </div>
+
+    {% if project.innovation_points or project.development_status or project.awards_patents_papers %}
+    <div class="project-detail-section">
+        <h3>项目详细信息</h3>
+        {% if project.innovation_points %}
+        <div class="detail-row">
+            <div class="detail-label">项目创新点：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</div>
+        </div>
+        {% endif %}
+        {% if project.development_status %}
+        <div class="detail-row">
+            <div class="detail-label">项目开发现状：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</div>
+        </div>
+        {% endif %}
+        {% if project.awards_patents_papers %}
+        <div class="detail-row">
+            <div class="detail-label">获奖、专利及论文情况：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="project-detail-section">
+        <h3>项目附件（专家评审材料）</h3>
+        {% if project.attachments.count() > 0 %}
+        <div class="file-list">
+            {% for attachment in project.attachments.all() %}
+            <div class="file-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm); margin-bottom: var(--spacing-sm);">
+                <div class="file-item-info" style="flex: 1;">
+                    <div class="file-item-name" style="font-weight: 500; margin-bottom: var(--spacing-xs);">{{ attachment.original_filename }}</div>
+                    <div class="file-item-size" style="color: var(--text-secondary); font-size: 0.9em;">{{ "%.2f"|format(attachment.file_size / 1024 / 1024) }} MB</div>
+                </div>
+                <div class="file-item-actions" style="display: flex; gap: var(--spacing-sm);">
+                    {% set file_path_url = attachment.file_path.replace('\\', '/') %}
+                    {% if attachment.file_type.lower() in ['pdf', 'jpg', 'jpeg', 'png', 'gif'] %}
+                    <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank">在线预览</a>
+                    {% else %}
+                    <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-secondary" target="_blank">查看</a>
+                    {% endif %}
+                    <a href="{{ url_for('uploaded_file', filename=file_path_url, download='true') }}" class="btn btn-sm btn-secondary">下载</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>该项目没有上传附件</p>
+        {% endif %}
+    </div>
+
+    {% if existing_score %}
+    <div class="project-detail-section">
+        <h3>我的评分</h3>
+        <div class="detail-row">
+            <div class="detail-label">评分：</div>
+            <div class="detail-value"><strong>{{ existing_score.score_value }}分</strong></div>
+        </div>
+        {% if existing_score.comment %}
+        <div class="detail-row">
+            <div class="detail-label">项目意见：</div>
+            <div class="detail-value">{{ existing_score.comment }}</div>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <div class="detail-label">评分时间：</div>
+            <div class="detail-value">{{ existing_score.scored_at.strftime('%Y-%m-%d %H:%M') if existing_score.scored_at else '未知' }}</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

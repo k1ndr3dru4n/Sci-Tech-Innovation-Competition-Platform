@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}分配评委 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>分配评委</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="project-detail">
+    <div class="project-detail-section">
+        <h3>项目信息</h3>
+        <div class="detail-row">
+            <div class="detail-label">项目名称：</div>
+            <div class="detail-value">{{ project.title }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">竞赛：</div>
+            <div class="detail-value">{{ project.competition.name }}</div>
+        </div>
+        {% if project.project_category %}
+        <div class="detail-row">
+            <div class="detail-label">项目组别：</div>
+            <div class="detail-value">{{ project.project_category }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_type %}
+        <div class="detail-row">
+            <div class="detail-label">作品类别：</div>
+            <div class="detail-value">{{ project.project_type }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_field %}
+        <div class="detail-row">
+            <div class="detail-label">项目领域：</div>
+            <div class="detail-value">{{ project.project_field }}</div>
+        </div>
+        {% endif %}
+        {% if project.push_college %}
+        <div class="detail-row">
+            <div class="detail-label">作品推送学院：</div>
+            <div class="detail-value">{{ project.push_college }}</div>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <div class="detail-label">队长：</div>
+            <div class="detail-value">{{ project.team.leader.real_name }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">学院：</div>
+            <div class="detail-value">{{ project.team.leader.college or '未设置' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">项目简介：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.description }}</div>
+        </div>
+        {% if project.innovation_points or project.development_status or project.awards_patents_papers %}
+        {% if project.innovation_points %}
+        <div class="detail-row">
+            <div class="detail-label">项目创新点：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</div>
+        </div>
+        {% endif %}
+        {% if project.development_status %}
+        <div class="detail-row">
+            <div class="detail-label">项目开发现状：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</div>
+        </div>
+        {% endif %}
+        {% if project.awards_patents_papers %}
+        <div class="detail-row">
+            <div class="detail-label">获奖、专利及论文情况：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>已分配的评委</h2>
+    </div>
+    {% if assigned_judges %}
+    <div class="table-container" style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 600px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 150px;">评委姓名</th>
+                    <th style="padding: 10px; text-align: center; min-width: 200px;">邮箱</th>
+                    <th style="padding: 10px; text-align: center; min-width: 140px;">分配时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for judge in assigned_judges %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ judge.real_name }}">{{ judge.real_name }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ judge.email }}">{{ judge.email }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ project.judge_assignments.filter_by(judge_id=judge.id).first().assigned_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p>尚未分配评委</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>分配新评委</h2>
+    </div>
+    <form method="POST" action="{{ url_for('school_admin.assign_judge', project_id=project.id) }}">
+        <div class="form-group">
+            <label for="judge_id" class="form-label">选择评委</label>
+            <select id="judge_id" name="judge_id" class="form-control" required aria-required="true">
+                <option value="">请选择评委</option>
+                {% for judge in judges %}
+                <option value="{{ judge.id }}">{{ judge.real_name }} ({{ judge.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">分配</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

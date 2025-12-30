@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}校赛决赛 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>校赛决赛</h1>
+    <p class="subtitle">进入决赛的项目（根据专家初审结果确定）</p>
+    {% if final_projects %}
+    <form method="POST" action="{{ url_for('school_admin.draw_lots_final') }}" style="display: inline-block; margin-left: var(--spacing-md);" onsubmit="return confirm('确定要随机抽签决定答辩顺序吗？此操作将重新分配所有进入决赛项目的答辩顺序。');">
+        <input type="hidden" name="competition_id" value="{{ selected_competition_id or '' }}">
+        <button type="submit" class="btn btn-primary">随机抽签决定答辩顺序</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('school_admin.final_competition') }}" class="filter-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto auto; gap: var(--spacing-md); align-items: end;">
+                <div class="form-group">
+                    <label class="form-label">竞赛名称</label>
+                    <select name="competition_id" class="form-control">
+                        <option value="">全部</option>
+                        {% for competition in competitions %}
+                        <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
+                            {{ competition.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                    <button type="submit" class="btn btn-primary">搜索</button>
+                    <a href="{{ url_for('school_admin.final_competition') }}" class="btn btn-secondary">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if final_projects or non_final_projects %}
+<div class="card">
+    <div class="card-header">
+        <h2>进入决赛的项目</h2>
+    </div>
+    <div class="card-body">
+        {% if final_projects %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1000px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 80px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">答辩顺序</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 250px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in final_projects %}
+                    {% set project = item.project %}
+                    {% set competition = project.competition %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong style="color: var(--primary-color);">{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if project.defense_order %}
+                                <span class="badge badge-info">第{{ project.defense_order }}位</span>
+                            {% else %}
+                                <span class="badge badge-warning">未抽签</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ competition.name }}">{{ competition.name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.college }}">{{ project.team.leader.college }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>暂无进入决赛的项目</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if non_final_projects %}
+<div class="card">
+    <div class="card-header">
+        <h2>未进入决赛的项目</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 250px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in non_final_projects %}
+                    {% set project = item.project %}
+                    {% set competition = project.competition %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ competition.name }}">{{ competition.name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.college }}">{{ project.team.leader.college }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>没有找到符合条件的项目</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                请确保项目已通过学校审核且已通过专家初审
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}我的项目 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>我的项目</h1>
+    <a href="{{ url_for('student.create_project_select_competition') }}" class="btn btn-primary">创建新项目</a>
+</div>
+
+<div class="projects-section">
+    {% if projects %}
+    <div class="table-container" style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 250px;">项目名称</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">状态</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">创建时间</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">
+                        {{ project.title }}
+                        {% if project_member_dict and project.id in project_member_dict %}
+                            {% set pm = project_member_dict[project.id] %}
+                            {% if not pm.is_confirmed %}
+                                <span class="badge badge-warning" style="margin-left: var(--spacing-xs);">待确认</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if project.status == 'draft' %}
+                            <span class="badge badge-warning">草稿</span>
+                        {% elif project.status == 'submitted' %}
+                            <span class="badge badge-info">学院审核中</span>
+                        {% elif project.status == 'college_approved' %}
+                            <span class="badge badge-success">学院已通过，学校审核中</span>
+                        {% elif project.status == 'college_rejected' %}
+                            <span class="badge badge-error">不通过</span>
+                        {% elif project.status == 'final_approved' %}
+                            <span class="badge badge-success">学校已通过</span>
+                        {% elif project.status == 'final_rejected' %}
+                            <span class="badge badge-error">学校审核不通过</span>
+                        {% else %}
+                            <span class="badge">{{ project.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ project.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; justify-content: center;">
+                            <a href="{{ url_for('student.view_project', project_id=project.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">查看详情</a>
+                            {% if project.status == 'draft' and project.team.leader_id == current_user.id %}
+                                <form method="POST" action="{{ url_for('student.delete_project', project_id=project.id) }}" style="display: inline; margin: 0;" onsubmit="return confirm('确定要删除项目"{{ project.title }}"吗？此操作不可恢复。');">
+                                    <button type="submit" class="btn btn-sm btn-danger" style="white-space: nowrap;">删除</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>您还没有参与任何项目</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

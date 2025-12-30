@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}审核项目 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>审核项目</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="project-detail">
+    <div class="project-detail-section">
+        <h3>项目基本信息</h3>
+        <div class="detail-row">
+            <div class="detail-label">项目名称：</div>
+            <div class="detail-value">{{ project.title }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">队长：</div>
+            <div class="detail-value">{{ project.team.leader.real_name }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">指导教师：</div>
+            <div class="detail-value">{{ project.instructor_name or '未填写' }}</div>
+        </div>
+    </div>
+
+    <div class="project-detail-section">
+        <h3>项目简介</h3>
+        <p style="white-space: pre-wrap;">{{ project.description }}</p>
+    </div>
+
+    {% if project.innovation_points or project.development_status or project.awards_patents_papers %}
+    <div class="project-detail-section">
+        <h3>项目详细信息</h3>
+        {% if project.innovation_points %}
+        <div class="detail-row">
+            <div class="detail-label">项目创新点：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</div>
+        </div>
+        {% endif %}
+        {% if project.development_status %}
+        <div class="detail-row">
+            <div class="detail-label">项目开发现状：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</div>
+        </div>
+        {% endif %}
+        {% if project.awards_patents_papers %}
+        <div class="detail-row">
+            <div class="detail-label">获奖、专利及论文情况：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if awards %}
+<div class="card">
+    <div class="card-header">
+        <h2>项目奖项</h2>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+            {% for award in awards %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 1.1em; margin-bottom: var(--spacing-xs);">{{ award.award_name }}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.9em;">设置时间：{{ award.created_at.strftime('%Y-%m-%d %H:%M') if award.created_at else '未知' }}</div>
+                </div>
+                {% if award.certificate_path %}
+                <div style="display: flex; gap: var(--spacing-xs);">
+                    <a href="{{ url_for('college_admin.view_certificate', project_id=project.id, award_id=award.id) }}" class="btn btn-sm btn-secondary" target="_blank">查看证书</a>
+                    <a href="{{ url_for('college_admin.download_certificate', project_id=project.id, award_id=award.id) }}" class="btn btn-sm btn-primary">下载证书</a>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if scores %}
+<div class="card">
+    <div class="card-header">
+        <h2>专家建议</h2>
+    </div>
+    <div class="card-body">
+        {% for score in scores %}
+        {% if score.comment %}
+        <div class="project-detail-section" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+            <div class="detail-row">
+                <div class="detail-label">建议：</div>
+                <div class="detail-value">{{ score.comment }}</div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% if not scores|selectattr('comment')|list %}
+        <p style="color: var(--text-secondary);">暂无专家建议</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h2>审核操作</h2>
+    </div>
+    <form method="POST" action="{{ url_for('college_admin.review_project', project_id=project.id) }}">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.action.label(class="form-label") }}
+            {{ form.action(class="form-control", required=True, aria_required="true") }}
+            {% if form.action.errors %}
+                <div class="form-error" role="alert">
+                    {% for error in form.action.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.comment.label(class="form-label") }}
+            {{ form.comment(class="form-control", rows="4") }}
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">提交审核</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}校外专家首页 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="student-dashboard">
+    <!-- 个人信息卡片 -->
+    <div class="profile-card">
+        <div class="profile-details">
+            <div class="detail-section">
+                <h2 class="profile-title">{{ current_user.real_name }}</h2>
+                <p class="profile-subtitle">校外专家</p>
+            </div>
+            
+            <div class="detail-section">
+                <h3>基本信息</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">姓名</span>
+                        <span class="detail-value">{{ current_user.real_name }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">用户名</span>
+                        <span class="detail-value">{{ current_user.username or '未设置' }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">角色</span>
+                        <span class="detail-value">校外专家</span>
+                    </div>
+                    {% if current_user.unit %}
+                    <div class="detail-item">
+                        <span class="detail-label">单位</span>
+                        <span class="detail-value">{{ current_user.unit }}</span>
+                    </div>
+                    {% endif %}
+                    {% if current_user.email %}
+                    <div class="detail-item">
+                        <span class="detail-label">邮箱</span>
+                        <span class="detail-value">{{ current_user.email }}</span>
+                    </div>
+                    {% endif %}
+                    {% if current_user.contact_info %}
+                    <div class="detail-item">
+                        <span class="detail-label">联系方式</span>
+                        <span class="detail-value">{{ current_user.contact_info }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="detail-item">
+                        <span class="detail-label">注册时间</span>
+                        <span class="detail-value">{{ current_user.created_at.strftime('%Y年%m月%d日') if current_user.created_at else '未知' }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">账户状态</span>
+                        <span class="detail-value">
+                            {% if current_user.is_active %}
+                                <span class="badge badge-success">正常</span>
+                            {% else %}
+                                <span class="badge badge-error">已禁用</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

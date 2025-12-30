@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}填写队员信息 - 创建项目{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>创建新项目 - {{ project.competition.name }}</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>第三步：填写队员和指导老师信息</h2>
+        <p class="subtitle">项目：{{ project.title or '未命名项目' }}</p>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('student.create_project_members', project_id=project.id) }}" id="members-form">
+            <!-- 指导老师信息 -->
+            <div class="form-section">
+                <h3>指导老师信息</h3>
+                <div class="form-group">
+                    <label class="form-label">姓名 <span class="required">*</span></label>
+                    <input type="text" name="instructor_name" class="form-control" value="{{ project.instructor_name or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">学工号 <span class="required">*</span></label>
+                    <input type="text" name="instructor_work_id" class="form-control" value="{{ project.instructor_work_id or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">单位 <span class="required">*</span></label>
+                    <input type="text" name="instructor_unit" class="form-control" value="{{ project.instructor_unit or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">联系方式 <span class="required">*</span></label>
+                    <input type="text" name="instructor_phone" class="form-control" value="{{ project.instructor_phone or '' }}" required>
+                </div>
+            </div>
+
+            <!-- 队员信息 -->
+            <div class="form-section" style="margin-top: var(--spacing-xl);">
+                <h3>队员信息</h3>
+                <div id="members-container">
+                    {% if existing_members %}
+                        {% for pm in existing_members %}
+                        <div class="member-card" data-order="{{ pm.order }}">
+                            <div class="member-card-header">
+                                <h4>第{{ pm.order }}位队员</h4>
+                                {% if pm.user_id != project.team.leader_id %}
+                                <button type="button" class="btn btn-sm btn-danger remove-member-btn">删除</button>
+                                {% else %}
+                                <span class="badge badge-info">队长</span>
+                                {% endif %}
+                            </div>
+                            <div class="member-card-body">
+                                <div class="form-group-inline">
+                                    <label class="form-label">姓名 <span class="required">*</span></label>
+                                    <input type="text" name="member_name_{{ pm.order }}" class="form-control" value="{{ pm.member_name or pm.user.real_name if pm.user else '' }}" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">学号 <span class="required">*</span></label>
+                                    <input type="text" name="member_work_id_{{ pm.order }}" class="form-control" value="{{ pm.member_work_id or pm.user.work_id if pm.user else '' }}" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">学院 <span class="required">*</span></label>
+                                    <select name="member_college_{{ pm.order }}" class="form-control" required>
+                                        <option value="">请选择</option>
+                                        {% for college in colleges %}
+                                        <option value="{{ college }}" {% if (pm.member_college or (pm.user.college if pm.user else '')) == college %}selected{% endif %}>{{ college }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">专业 <span class="required">*</span></label>
+                                    <input type="text" name="member_major_{{ pm.order }}" class="form-control" value="{{ pm.member_major or '' }}" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">联系方式 <span class="required">*</span></label>
+                                    <input type="text" name="member_phone_{{ pm.order }}" class="form-control" value="{{ pm.member_phone or '' }}" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">电子邮箱 <span class="required">*</span></label>
+                                    <input type="email" name="member_email_{{ pm.order }}" class="form-control" value="{{ pm.member_email or pm.user.email if pm.user else '' }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="member-card" data-order="1">
+                            <div class="member-card-header">
+                                <h4>第1位队员</h4>
+                                <span class="badge badge-info">队长</span>
+                            </div>
+                            <div class="member-card-body">
+                                <div class="form-group-inline">
+                                    <label class="form-label">姓名 <span class="required">*</span></label>
+                                    <input type="text" name="member_name_1" class="form-control" value="{{ current_user.real_name }}" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">学号 <span class="required">*</span></label>
+                                    <input type="text" name="member_work_id_1" class="form-control" value="{{ current_user.work_id }}" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">学院 <span class="required">*</span></label>
+                                    <select name="member_college_1" class="form-control" required>
+                                        <option value="">请选择</option>
+                                        {% for college in colleges %}
+                                        <option value="{{ college }}" {% if current_user.college == college %}selected{% endif %}>{{ college }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">专业 <span class="required">*</span></label>
+                                    <input type="text" name="member_major_1" class="form-control" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">联系方式 <span class="required">*</span></label>
+                                    <input type="text" name="member_phone_1" class="form-control" required>
+                                </div>
+                                <div class="form-group-inline">
+                                    <label class="form-label">电子邮箱 <span class="required">*</span></label>
+                                    <input type="email" name="member_email_1" class="form-control" value="{{ current_user.email or '' }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <button type="button" class="btn btn-secondary" id="add-member-btn" style="margin-top: var(--spacing-md);">添加队员</button>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-xl);">
+                <button type="submit" name="save" class="btn btn-secondary" style="flex: 1;">保存</button>
+                <button type="submit" name="next" class="btn btn-primary" style="flex: 1;">完成</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('members-container');
+    const addBtn = document.getElementById('add-member-btn');
+    let memberCount = {{ existing_members|length if existing_members else 1 }};
+    
+    // 学院列表（从服务器传递）
+    const colleges = {{ colleges|tojson }};
+    
+    addBtn.addEventListener('click', function() {
+        memberCount++;
+        const memberCard = document.createElement('div');
+        memberCard.className = 'member-card';
+        memberCard.setAttribute('data-order', memberCount);
+        
+        // 生成学院选项
+        let collegeOptions = '<option value="">请选择</option>';
+        colleges.forEach(function(college) {
+            collegeOptions += `<option value="${college}">${college}</option>`;
+        });
+        
+        memberCard.innerHTML = `
+            <div class="member-card-header">
+                <h4>第${memberCount}位队员</h4>
+                <button type="button" class="btn btn-sm btn-danger remove-member-btn">删除</button>
+            </div>
+            <div class="member-card-body">
+                <div class="form-group-inline">
+                    <label class="form-label">姓名 <span class="required">*</span></label>
+                    <input type="text" name="member_name_${memberCount}" class="form-control" required>
+                </div>
+                <div class="form-group-inline">
+                    <label class="form-label">学号 <span class="required">*</span></label>
+                    <input type="text" name="member_work_id_${memberCount}" class="form-control" required>
+                </div>
+                <div class="form-group-inline">
+                    <label class="form-label">学院 <span class="required">*</span></label>
+                    <select name="member_college_${memberCount}" class="form-control" required>
+                        ${collegeOptions}
+                    </select>
+                </div>
+                <div class="form-group-inline">
+                    <label class="form-label">专业 <span class="required">*</span></label>
+                    <input type="text" name="member_major_${memberCount}" class="form-control" required>
+                </div>
+                <div class="form-group-inline">
+                    <label class="form-label">联系方式 <span class="required">*</span></label>
+                    <input type="text" name="member_phone_${memberCount}" class="form-control" required>
+                </div>
+                <div class="form-group-inline">
+                    <label class="form-label">电子邮箱 <span class="required">*</span></label>
+                    <input type="email" name="member_email_${memberCount}" class="form-control" required>
+                </div>
+            </div>
+        `;
+        container.appendChild(memberCard);
+        
+        // 添加删除按钮事件
+        memberCard.querySelector('.remove-member-btn').addEventListener('click', function() {
+            memberCard.remove();
+            // 重新编号
+            updateMemberOrders();
+        });
+    });
+    
+    // 委托删除事件
+    container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-member-btn')) {
+            const memberCard = e.target.closest('.member-card');
+            if (memberCard && !memberCard.querySelector('.badge-info')) {  // 不能删除队长
+                memberCard.remove();
+                updateMemberOrders();
+            }
+        }
+    });
+    
+    function updateMemberOrders() {
+        const cards = container.querySelectorAll('.member-card');
+        cards.forEach((card, index) => {
+            const order = index + 1;
+            card.setAttribute('data-order', order);
+            card.querySelector('h4').textContent = `第${order}位队员`;
+            // 更新所有input和select的name属性
+            card.querySelectorAll('input, select').forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    const parts = name.split('_');
+                    const field = parts.slice(0, -1).join('_');
+                    input.setAttribute('name', `${field}_${order}`);
+                }
+            });
+        });
+        memberCount = cards.length;
+    }
+});
+</script>
+
+<style>
+.form-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.form-section h3 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.form-group-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group-inline .form-label {
+    min-width: 100px;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.form-group-inline .form-control {
+    flex: 1;
+}
+
+.member-card {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.member-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.member-card-header h4 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.125rem;
+}
+
+.member-card-body {
+    padding-top: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+    .form-group-inline {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .form-group-inline .form-label {
+        min-width: auto;
+        margin-bottom: var(--spacing-xs);
+    }
+}
+</style>
+{% endblock %}

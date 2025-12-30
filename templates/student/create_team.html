@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}创建队伍 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>创建新队伍</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="card">
+    <form method="POST" action="{{ url_for('student.create_team') }}">
+        <div class="form-group">
+            <label for="team_name" class="form-label">队伍名称</label>
+            <input type="text" id="team_name" name="team_name" class="form-control" required aria-required="true" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+            <label for="competition_id" class="form-label">选择竞赛</label>
+            <select id="competition_id" name="competition_id" class="form-control" required aria-required="true">
+                <option value="">请选择竞赛</option>
+                {% for competition in competitions %}
+                <option value="{{ competition.id }}">{{ competition.name }} ({{ competition.year }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">创建队伍</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

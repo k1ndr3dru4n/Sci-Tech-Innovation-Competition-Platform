@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}填写项目信息 - 创建项目{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>创建新项目{% if project %} - {{ project.competition.name }}{% elif competition %} - {{ competition.name }}{% endif %}</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>第二步：填写项目信息</h2>
+        <p class="subtitle">竞赛：{% if project %}{{ project.competition.name }}{% elif competition %}{{ competition.name }}{% endif %}</p>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{% if project %}{{ url_for('student.create_project_info', project_id=project.id) }}{% else %}{{ url_for('student.create_project_info') }}{% endif %}" id="project-info-form" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            {% if form.errors %}
+                <div class="alert alert-error" role="alert">
+                    <strong>表单验证失败：</strong>
+                    <ul style="margin: var(--spacing-sm) 0 0 0; padding-left: var(--spacing-lg);">
+                        {% for field, errors in form.errors.items() %}
+                            {% for error in errors %}
+                                <li>{{ form[field].label.text }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control", required=True, aria_required="true") }}
+                {% if form.title.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.title.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# 根据竞赛类型显示不同的字段 #}
+            {% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' %}
+            <div class="form-group">
+                {{ form.project_category.label(class="form-label") }}
+                {{ form.project_category(class="form-control", required=True, aria_required="true") }}
+                {% if form.project_category.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.project_category.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {% elif competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛' %}
+            <div class="form-group">
+                {{ form.project_type.label(class="form-label") }}
+                {{ form.project_type(class="form-control", required=True, aria_required="true") }}
+                {% if form.project_type.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.project_type.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {% elif competition_type == '"挑战杯"中国大学生创业计划大赛' %}
+            <div class="form-group">
+                {{ form.project_field.label(class="form-label") }}
+                {{ form.project_field(class="form-control", required=True, aria_required="true") }}
+                {% if form.project_field.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.project_field.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                {{ form.push_college.label(class="form-label") }}
+                {{ form.push_college(class="form-control", required=True, aria_required="true") }}
+                {% if form.push_college.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.push_college.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control", rows="5", required=True, aria_required="true") }}
+                {% if form.description.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.description.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# 中国国际大学生创新大赛"青年红色筑梦之旅"赛道、"挑战杯"全国大学生课外学术科技作品竞赛和"挑战杯"中国大学生创业计划大赛的额外字段 #}
+            {% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' or competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛' or competition_type == '"挑战杯"中国大学生创业计划大赛' %}
+            <div class="form-group">
+                {{ form.innovation_points.label(class="form-label") }}
+                {{ form.innovation_points(class="form-control", required=True, aria_required="true") }}
+                {% if form.innovation_points.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.innovation_points.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.development_status.label(class="form-label") }}
+                {{ form.development_status(class="form-control", required=True, aria_required="true") }}
+                {% if form.development_status.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.development_status.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.awards_patents_papers.label(class="form-label") }}
+                {{ form.awards_patents_papers(class="form-control", required=True, aria_required="true") }}
+                {% if form.awards_patents_papers.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.awards_patents_papers.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {# 中国国际大学生创新大赛"青年红色筑梦之旅"赛道的附件上传 #}
+            {% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' %}
+            <div class="form-group">
+                <label class="form-label">项目附件（专家评审材料）</label>
+                <input type="file" name="attachments" id="attachments" class="form-control" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.rar">
+                <small class="form-text" style="color: var(--text-secondary);">支持格式：PDF、Word、图片、压缩包（可多选，单个文件不超过16MB）</small>
+                {% if project and project.attachments.count() > 0 %}
+                <div style="margin-top: var(--spacing-md);">
+                    <p style="font-weight: 500; margin-bottom: var(--spacing-sm);">已上传的附件：</p>
+                    <div class="file-list" style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        {% for attachment in project.attachments.all() %}
+                        <div class="file-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                            <div style="flex: 1;">
+                                <span style="font-weight: 500;">{{ attachment.original_filename }}</span>
+                                <span style="color: var(--text-secondary); font-size: 0.9em; margin-left: var(--spacing-sm);">
+                                    ({{ "%.2f"|format(attachment.file_size / 1024 / 1024) }} MB)
+                                </span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteAttachment({{ attachment.id }})" style="margin-left: var(--spacing-sm);">删除</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="form-group" style="display: flex; gap: var(--spacing-md);">
+                <button type="submit" name="save" class="btn btn-secondary" style="flex: 1;">保存</button>
+                <button type="submit" name="next" class="btn btn-primary" style="flex: 1;">下一步：填写队员信息</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' and project %}
+<script>
+function deleteAttachment(attachmentId) {
+    if (confirm('确定要删除这个附件吗？')) {
+        fetch('{{ url_for("student.delete_attachment", project_id=project.id) }}?attachment_id=' + attachmentId, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('删除失败：' + (data.message || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败，请刷新页面重试');
+        });
+    }
+}
+</script>
+{% endif %}
+{% endblock %}
+

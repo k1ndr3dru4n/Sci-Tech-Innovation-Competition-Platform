@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}评审项目 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>评审项目</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>分配给我的项目</h2>
+    </div>
+
+    {% if projects %}
+    <div class="table-container" style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 1000px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                    <th style="padding: 10px; text-align: center; min-width: 150px;">队伍名称</th>
+                    <th style="padding: 10px; text-align: center; min-width: 250px;">项目简介</th>
+                    <th style="padding: 10px; text-align: center; min-width: 150px;">评分状态</th>
+                    <th style="padding: 10px; text-align: center; min-width: 200px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.name }}">{{ project.team.name }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.description or '-' }}">{{ project.description[:50] if project.description else '-' }}{% if project.description and project.description|length > 50 %}...{% endif %}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% set score = project.scores.filter_by(judge_id=current_user.id).first() %}
+                        {% if score %}
+                            <span class="badge badge-success">已评分 ({{ score.score_value }}分)</span>
+                        {% else %}
+                            <span class="badge badge-warning">待评分</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; justify-content: center;">
+                            <a href="{{ url_for('judge.view_project', project_id=project.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">查看详情</a>
+                            <a href="{{ url_for('judge.score_project', project_id=project.id) }}" class="btn btn-sm btn-success" style="white-space: nowrap;">打分</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>当前没有分配给您评审的项目</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

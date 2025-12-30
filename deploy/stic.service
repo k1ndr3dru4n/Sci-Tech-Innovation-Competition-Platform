@@ -1,0 +1,29 @@
+[Unit]
+Description=STIC Gunicorn daemon
+After=network.target postgresql.service
+
+[Service]
+User=stic
+Group=stic
+WorkingDirectory=/opt/stic
+Environment="PATH=/opt/stic/venv/bin"
+EnvironmentFile=/opt/stic/.env
+ExecStart=/opt/stic/venv/bin/gunicorn \
+    --config /opt/stic/gunicorn_config.py \
+    app:app
+
+# 重启策略
+Restart=always
+RestartSec=3
+StartLimitInterval=0
+
+# 资源限制
+LimitNOFILE=65535
+
+# 安全设置
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+

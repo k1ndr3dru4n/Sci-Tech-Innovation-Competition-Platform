@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}教师管理 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>教师管理</h1>
+    <p class="subtitle">学院管理员信息</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('school_admin.teachers') }}" class="filter-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto auto; gap: var(--spacing-md); align-items: end;">
+                <div class="form-group">
+                    <label for="teacher_name" class="form-label">姓名</label>
+                    <input type="text" id="teacher_name" name="teacher_name" class="form-control" 
+                           value="{{ request.args.get('teacher_name', '') }}" placeholder="请输入教师姓名">
+                </div>
+                
+                <div class="form-group">
+                    <label for="work_id" class="form-label">学工号</label>
+                    <input type="text" id="work_id" name="work_id" class="form-control" 
+                           value="{{ request.args.get('work_id', '') }}" placeholder="请输入学工号">
+                </div>
+                
+                <div class="form-group">
+                    <label for="college" class="form-label">学院</label>
+                    <input type="text" id="college" name="college" class="form-control" 
+                           value="{{ request.args.get('college', '') }}" placeholder="请输入学院名称">
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: var(--spacing-sm);">
+                    <button type="submit" class="btn btn-primary">搜索</button>
+                    <a href="{{ url_for('school_admin.teachers') }}" class="btn btn-secondary">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    {% if teachers %}
+    <div class="table-container" style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 1000px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">学工号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">姓名</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">学院</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">联系方式</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">邮箱</th>
+                    <th style="padding: 10px; text-align: center; min-width: 140px;">注册时间</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">账户状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for teacher in teachers %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ teacher.work_id or '未设置' }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ teacher.real_name }}">{{ teacher.real_name }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ teacher.college or '未设置' }}">{{ teacher.college or '未设置' }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ teacher.contact_info or '未设置' }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ teacher.email or '未设置' }}">{{ teacher.email or '未设置' }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ teacher.created_at.strftime('%Y-%m-%d %H:%M') if teacher.created_at else '未知' }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if teacher.is_active %}
+                            <span class="badge badge-success">正常</span>
+                        {% else %}
+                            <span class="badge badge-error">已禁用</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>当前没有找到符合条件的学院管理员</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}大学科创竞赛管理平台{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar" role="navigation" aria-label="主导航">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="{{ url_for('dashboard.dashboard') if current_user.is_authenticated else url_for('auth.login') }}" class="navbar-logo">
+                    科创竞赛管理平台
+                </a>
+            </div>
+            {% if current_user.is_authenticated %}
+            <div class="navbar-menu">
+                <div class="navbar-item user-info">
+                    <span>{{ current_user.real_name }}{% if current_user.work_id %} ({{ current_user.work_id }}){% endif %}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="navbar-menu">
+                <a href="{{ url_for('auth.login') }}" class="navbar-item">校内用户登录</a>
+                <a href="{{ url_for('auth.judge_login') }}" class="navbar-item">校外专家登录</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="main-content" role="main">
+        {% if current_user.is_authenticated %}
+        <div class="layout-container">
+            {% include 'includes/sidebar.html' %}
+            <div class="content-area">
+                <div class="container">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <div class="messages" role="alert">
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }}">
+                                        <span class="alert-message">{{ message }}</span>
+                                        <button type="button" class="alert-close" onclick="this.parentElement.parentElement.remove()" aria-label="关闭">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+        {% else %}
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages" role="alert">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span class="alert-message">{{ message }}</span>
+                                <button type="button" class="alert-close" onclick="this.parentElement.parentElement.remove()" aria-label="关闭">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+                    {% block content %}{% endblock %}
+        {% if current_user.is_authenticated %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        </div>
+        {% endif %}
+    </main>
+
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>Copyright © 2025 大学科创竞赛管理平台. All rights reserved.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!-- 侧边栏组件 -->
+<aside class="sidebar" role="complementary">
+    <div class="sidebar-header">
+        <h3>导航菜单</h3>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard.dashboard') }}" class="sidebar-item" data-icon="home">
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">首页</span>
+        </a>
+        
+        {% if current_user.role == 'student' %}
+            <a href="{{ url_for('student.projects') }}" class="sidebar-item" data-icon="project">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">我的项目</span>
+            </a>
+        {% elif current_user.role == 'college_admin' %}
+            <a href="{{ url_for('college_admin.review') }}" class="sidebar-item" data-icon="review">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">审核管理</span>
+            </a>
+            <a href="{{ url_for('college_admin.projects') }}" class="sidebar-item" data-icon="list">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">项目列表</span>
+            </a>
+            <a href="{{ url_for('college_admin.students') }}" class="sidebar-item" data-icon="user">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">学生信息</span>
+            </a>
+        {% elif current_user.role == 'school_admin' %}
+            <a href="{{ url_for('school_admin.review') }}" class="sidebar-item" data-icon="review">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">审核管理</span>
+            </a>
+            <a href="{{ url_for('school_admin.projects') }}" class="sidebar-item" data-icon="list">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">项目列表</span>
+            </a>
+            <a href="{{ url_for('school_admin.expert_review') }}" class="sidebar-item" data-icon="judge">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">专家评审</span>
+            </a>
+            <a href="{{ url_for('school_admin.teachers') }}" class="sidebar-item" data-icon="user">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">教师管理</span>
+            </a>
+            <a href="{{ url_for('school_admin.final_competition') }}" class="sidebar-item" data-icon="trophy">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">校赛决赛</span>
+            </a>
+            <a href="{{ url_for('school_admin.awards') }}" class="sidebar-item" data-icon="trophy">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">奖项收集/发布</span>
+            </a>
+            <a href="{{ url_for('school_admin.competitions') }}" class="sidebar-item" data-icon="trophy">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">竞赛管理</span>
+            </a>
+        {% elif current_user.role == 'judge' %}
+            <a href="{{ url_for('judge.projects') }}" class="sidebar-item" data-icon="judge">
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">评审项目</span>
+            </a>
+        {% endif %}
+        
+        <div class="sidebar-divider"></div>
+        
+        <a href="{{ url_for('profile.profile') }}" class="sidebar-item" data-icon="profile">
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">个人资料</span>
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="sidebar-item sidebar-item-logout" data-icon="logout">
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">退出登录</span>
+        </a>
+    </nav>
+</aside>
+

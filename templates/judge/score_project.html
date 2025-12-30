@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}项目评分 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>项目评分</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>{{ project.title }}</h2>
+        <p>队伍：{{ project.team.name }}</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('judge.score_project', project_id=project.id) }}" id="scoreForm">
+        {{ form.hidden_tag() }}
+        
+        <div class="score-form">
+            <div class="form-group">
+                <label for="score_value" class="form-label">评分（100分制）<span class="required">*</span></label>
+                {{ form.score_value(class="form-control", type="number", min="0", max="100", step="0.1", required=True, aria_required="true") }}
+                {% if form.score_value.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.score_value.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text" style="color: var(--text-secondary);">请输入0-100之间的分数</small>
+            </div>
+
+            <div class="form-group">
+                <label for="comment" class="form-label">项目意见</label>
+                {{ form.comment(class="form-control", rows="5") }}
+                {% if form.comment.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.comment.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text" style="color: var(--text-secondary);">请输入对项目的评价意见</small>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-block">提交评分</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+

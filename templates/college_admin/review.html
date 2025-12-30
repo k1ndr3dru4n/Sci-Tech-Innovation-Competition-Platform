@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}审核管理 - 学院管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>审核管理</h1>
+    <p class="subtitle">{{ college }} - 待审核项目</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>待审核项目列表</h2>
+    </div>
+
+    {% if projects %}
+    <div class="table-container" style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">状态</th>
+                    <th style="padding: 10px; text-align: center; min-width: 140px;">提交时间</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if project.status == 'submitted' %}
+                            <span class="badge badge-info">学院审核中</span>
+                        {% elif project.status == 'college_approved' %}
+                            <span class="badge badge-success">学院已通过，学校审核中</span>
+                        {% elif project.status == 'college_rejected' %}
+                            <span class="badge badge-error">不通过</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ project.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        <a href="{{ url_for('college_admin.review_project', project_id=project.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">审核</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>当前没有待审核的项目</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

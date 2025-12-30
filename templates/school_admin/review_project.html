@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}审核项目 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>审核项目</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="project-detail">
+    <div class="project-detail-section">
+        <h3>项目基本信息</h3>
+        <div class="detail-row">
+            <div class="detail-label">项目名称：</div>
+            <div class="detail-value">{{ project.title }}</div>
+        </div>
+        {% if project.project_category %}
+        <div class="detail-row">
+            <div class="detail-label">项目组别：</div>
+            <div class="detail-value">{{ project.project_category }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_type %}
+        <div class="detail-row">
+            <div class="detail-label">作品类别：</div>
+            <div class="detail-value">{{ project.project_type }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_field %}
+        <div class="detail-row">
+            <div class="detail-label">项目领域：</div>
+            <div class="detail-value">{{ project.project_field }}</div>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <div class="detail-label">作品推送学院：</div>
+            <div class="detail-value">{{ project.push_college or '未填写' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">队长：</div>
+            <div class="detail-value">{{ project.team.leader.real_name }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">队长学工号：</div>
+            <div class="detail-value">{{ project.team.leader.work_id or '未设置' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">学院：</div>
+            <div class="detail-value">{{ project.team.leader.college or '未设置' }}</div>
+        </div>
+    </div>
+
+    <div class="project-detail-section">
+        <h3>项目简介</h3>
+        <p style="white-space: pre-wrap;">{{ project.description }}</p>
+    </div>
+
+    {% if project.innovation_points or project.development_status or project.awards_patents_papers %}
+    <div class="project-detail-section">
+        <h3>项目详细信息</h3>
+        {% if project.innovation_points %}
+        <div class="detail-row">
+            <div class="detail-label">项目创新点：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</div>
+        </div>
+        {% endif %}
+        {% if project.development_status %}
+        <div class="detail-row">
+            <div class="detail-label">项目开发现状：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</div>
+        </div>
+        {% endif %}
+        {% if project.awards_patents_papers %}
+        <div class="detail-row">
+            <div class="detail-label">获奖、专利及论文情况：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="project-detail-section">
+        <h3>队员信息</h3>
+        {% if project.project_members %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">顺位</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">姓名</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">学号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">专业</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">联系方式</th>
+                        <th style="padding: 10px; text-align: center; min-width: 180px;">邮箱</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">确认状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in project.project_members.order_by('order') %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ member.order }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_name or member.user.real_name if member.user else '未填写' }}">{{ member.member_name or member.user.real_name if member.user else '未填写' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ member.member_work_id or member.user.work_id if member.user else '未填写' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_college or member.user.college if member.user else '未填写' }}">{{ member.member_college or member.user.college if member.user else '未填写' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_major or '未填写' }}">{{ member.member_major or '未填写' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ member.member_phone or member.user.contact_info if member.user else '未填写' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_email or member.user.email if member.user else '未填写' }}">{{ member.member_email or member.user.email if member.user else '未填写' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if member.is_confirmed %}
+                                <span class="badge badge-success">已确认</span>
+                            {% else %}
+                                <span class="badge badge-warning">待确认</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>暂无队员信息</p>
+        {% endif %}
+    </div>
+
+    <div class="project-detail-section">
+        <h3>指导老师信息</h3>
+        <div class="detail-row">
+            <div class="detail-label">姓名：</div>
+            <div class="detail-value">{{ project.instructor_name or '未填写' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">学工号：</div>
+            <div class="detail-value">{{ project.instructor_work_id or '未填写' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">单位：</div>
+            <div class="detail-value">{{ project.instructor_unit or '未填写' }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">联系方式：</div>
+            <div class="detail-value">{{ project.instructor_phone or '未填写' }}</div>
+        </div>
+    </div>
+
+    {% if project.college_review_comment %}
+    <div class="project-detail-section">
+        <h3>学院审核意见</h3>
+        <p>{{ project.college_review_comment }}</p>
+    </div>
+    {% endif %}
+</div>
+
+{% if scores %}
+<div class="card">
+    <div class="card-header">
+        <h2>专家评分</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">专家姓名</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">评分</th>
+                        <th style="padding: 10px; text-align: center; min-width: 400px;">项目意见</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">评分时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for score in scores %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ score.judge.real_name }}">{{ score.judge.real_name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ score.score_value }}分</strong></td>
+                        <td style="padding: 10px; text-align: left;">{{ score.comment or '无' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ score.scored_at.strftime('%Y-%m-%d %H:%M') if score.scored_at else '未知' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h2>审核操作</h2>
+    </div>
+    <form method="POST" action="{{ url_for('school_admin.review_project', project_id=project.id) }}">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.action.label(class="form-label") }}
+            {{ form.action(class="form-control", required=True, aria_required="true") }}
+            {% if form.action.errors %}
+                <div class="form-error" role="alert">
+                    {% for error in form.action.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.comment.label(class="form-label") }}
+            {{ form.comment(class="form-control", rows="4", placeholder="请输入审核意见（可选）") }}
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">提交审核</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

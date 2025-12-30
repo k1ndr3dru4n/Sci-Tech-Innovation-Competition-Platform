@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}创建项目 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>创建新项目</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="card">
+    <form method="POST" action="{{ url_for('student.create_project', team_id=team.id) }}">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control", required=True, aria_required="true") }}
+            {% if form.title.errors %}
+                <div class="form-error" role="alert">
+                    {% for error in form.title.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control", rows="5", required=True, aria_required="true") }}
+            {% if form.description.errors %}
+                <div class="form-error" role="alert">
+                    {% for error in form.description.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">选择赛道（可多选）</label>
+            {% for track in team.competition.tracks.all() %}
+            <div class="checkbox-label">
+                <input type="checkbox" name="track_ids" value="{{ track.id }}" id="track_{{ track.id }}" required>
+                <label for="track_{{ track.id }}">{{ track.name }}</label>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group">
+            {{ form.instructor_name.label(class="form-label") }}
+            {{ form.instructor_name(class="form-control") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.instructor_title.label(class="form-label") }}
+            {{ form.instructor_title(class="form-control") }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">选择队员（按顺位）</label>
+            <p class="form-text">请按顺序选择参与项目的队员，队长将自动加入并确认</p>
+            <div id="members-container">
+                <div class="member-row">
+                    <label class="member-order">第1位</label>
+                    <select name="member_work_ids" class="form-control member-select" required>
+                        <option value="">请选择队员</option>
+                        {% for member in members_list %}
+                        <option value="{{ member.work_id }}">{{ member.real_name }} ({{ member.work_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" id="add-member-btn" style="margin-top: var(--spacing-sm);">添加队员</button>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">创建项目</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('members-container');
+    const addBtn = document.getElementById('add-member-btn');
+    let memberCount = 1;
+    
+    addBtn.addEventListener('click', function() {
+        memberCount++;
+        const memberRow = document.createElement('div');
+        memberRow.className = 'member-row';
+        memberRow.innerHTML = `
+            <label class="member-order">第${memberCount}位</label>
+            <select name="member_work_ids" class="form-control member-select">
+                <option value="">请选择队员</option>
+                {% for member in members_list %}
+                <option value="{{ member.work_id }}">{{ member.real_name }} ({{ member.work_id }})</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-sm btn-danger remove-member-btn">删除</button>
+        `;
+        container.appendChild(memberRow);
+        
+        // 添加删除按钮事件
+        memberRow.querySelector('.remove-member-btn').addEventListener('click', function() {
+            memberRow.remove();
+        });
+    });
+    
+    // 委托删除事件
+    container.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-member-btn')) {
+            e.target.closest('.member-row').remove();
+        }
+    });
+});
+</script>
+
+<style>
+.member-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.member-order {
+    min-width: 60px;
+    font-weight: 500;
+}
+
+.member-select {
+    flex: 1;
+}
+
+.remove-member-btn {
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}
+

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}竞赛管理 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>竞赛管理</h1>
+    <a href="{{ url_for('school_admin.create_competition') }}" class="btn btn-primary">创建新竞赛</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>竞赛列表</h2>
+    </div>
+    <div class="card-body">
+        {% if competitions %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 80px;">年份</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">竞赛类型</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">描述</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">注册开始时间</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">注册结束时间</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">发布状态</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for competition in competitions %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ competition.name }}">{{ competition.name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ competition.year }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ competition.competition_type or '-' }}">{{ competition.competition_type or '-' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ competition.description or '-' }}">{{ competition.description or '-' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ competition.registration_start.strftime('%Y-%m-%d %H:%M') if competition.registration_start else '-' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ competition.registration_end.strftime('%Y-%m-%d %H:%M') if competition.registration_end else '-' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if competition.is_published %}
+                                <span class="badge badge-success">已发布</span>
+                            {% else %}
+                                <span class="badge badge-warning">未发布</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; justify-content: center;">
+                                <a href="{{ url_for('school_admin.edit_competition', competition_id=competition.id) }}" class="btn btn-sm btn-secondary" style="white-space: nowrap;">编辑</a>
+                                <form method="POST" action="{{ url_for('school_admin.delete_competition', competition_id=competition.id) }}" style="display: inline;" onsubmit="return confirm('确定要删除竞赛\"{{ competition.name }}\"吗？此操作不可恢复！');">
+                                    <button type="submit" class="btn btn-sm btn-danger" style="white-space: nowrap;">删除</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>当前没有竞赛</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

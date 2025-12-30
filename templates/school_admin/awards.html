@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}奖项收集/发布 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>奖项收集/发布</h1>
+    <p class="subtitle">为进入决赛的项目设置奖项</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('school_admin.awards') }}" class="filter-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto auto; gap: var(--spacing-md); align-items: end;">
+                <div class="form-group">
+                    <label class="form-label">竞赛名称</label>
+                    <select name="competition_id" class="form-control">
+                        <option value="">全部</option>
+                        {% for competition in competitions %}
+                        <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
+                            {{ competition.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                    <button type="submit" class="btn btn-primary">搜索</button>
+                    <a href="{{ url_for('school_admin.awards') }}" class="btn btn-secondary">重置</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if projects_with_awards %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 250px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">奖项</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in projects_with_awards %}
+                    {% set project = item.project %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.competition.name }}">{{ project.competition.name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.college }}">{{ project.team.leader.college }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if item.has_award %}
+                                {% for award in item.awards %}
+                                    <span class="badge badge-success">{{ award.award_name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-warning">未设置</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <a href="{{ url_for('school_admin.set_award_for_final', project_id=project.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">设置奖项</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>没有找到进入决赛的项目</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                请先在"校赛决赛"页面查看进入决赛的项目
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

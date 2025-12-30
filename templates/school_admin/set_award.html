@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}设置奖项 - 科创竞赛管理平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>设置奖项</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="project-detail">
+    <div class="project-detail-section">
+        <h3>项目信息</h3>
+        <div class="detail-row">
+            <div class="detail-label">项目名称：</div>
+            <div class="detail-value">{{ project.title }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">竞赛：</div>
+            <div class="detail-value">{{ project.competition.name }}</div>
+        </div>
+        {% if project.project_category %}
+        <div class="detail-row">
+            <div class="detail-label">项目组别：</div>
+            <div class="detail-value">{{ project.project_category }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_type %}
+        <div class="detail-row">
+            <div class="detail-label">作品类别：</div>
+            <div class="detail-value">{{ project.project_type }}</div>
+        </div>
+        {% endif %}
+        {% if project.project_field %}
+        <div class="detail-row">
+            <div class="detail-label">项目领域：</div>
+            <div class="detail-value">{{ project.project_field }}</div>
+        </div>
+        {% endif %}
+        {% if project.push_college %}
+        <div class="detail-row">
+            <div class="detail-label">作品推送学院：</div>
+            <div class="detail-value">{{ project.push_college }}</div>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <div class="detail-label">项目简介：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.description }}</div>
+        </div>
+        {% if project.innovation_points or project.development_status or project.awards_patents_papers %}
+        {% if project.innovation_points %}
+        <div class="detail-row">
+            <div class="detail-label">项目创新点：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</div>
+        </div>
+        {% endif %}
+        {% if project.development_status %}
+        <div class="detail-row">
+            <div class="detail-label">项目开发现状：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</div>
+        </div>
+        {% endif %}
+        {% if project.awards_patents_papers %}
+        <div class="detail-row">
+            <div class="detail-label">获奖、专利及论文情况：</div>
+            <div class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>设置奖项</h2>
+    </div>
+    <form method="POST" action="{{ url_for('school_admin.set_award_for_final', project_id=project.id) }}">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.award_name.label(class="form-label") }}
+            {{ form.award_name(class="form-control", placeholder="例如：一等奖、二等奖、三等奖、优秀奖", required=True, aria_required="true") }}
+            {% if form.award_name.errors %}
+                <div class="form-error" role="alert">
+                    {% for error in form.award_name.errors %}
+                        <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">生成证书并保存</button>
+        </div>
+    </form>
+    
+    <div class="alert alert-info">
+        <p><strong>提示：</strong>设置奖项后，系统将自动生成以"队伍名+奖项名称"命名的电子证书（PNG格式）。</p>
+    </div>
+</div>
+{% endblock %}
+
