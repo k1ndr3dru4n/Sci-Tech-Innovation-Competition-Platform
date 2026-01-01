@@ -1,0 +1,810 @@
+{% extends "base.html" %}
+
+{% block title %}科创竞赛参与与获奖数据 - 校级管理员{% endblock %}
+
+{% block extra_css %}
+<!-- AG Grid Community CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/styles/ag-theme-alpine.css">
+<style>
+    .ag-theme-alpine {
+        --ag-header-height: 60px;
+        --ag-header-foreground-color: #1e293b;
+        --ag-header-background-color: #f1f5f9;
+        --ag-border-color: #e2e8f0;
+        font-size: 0.75rem;
+    }
+    
+    .assessment-grid-container {
+        height: 600px;
+        width: 100%;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    /* 确保 AG Grid 可以横向滚动 */
+    .ag-theme-alpine {
+        --ag-scrollbar-size: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>考核模块</h1>
+    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+        <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+            <label for="year_select" style="margin: 0; white-space: nowrap;">年度：</label>
+            <select id="year_select" onchange="window.location.href='{{ url_for('school_admin.assessment') }}?year=' + this.value" style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-xs);">
+                {% for year in available_years %}
+                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="{{ url_for('school_admin.export_assessment', year=selected_year) }}" class="btn btn-primary">
+            导出Excel
+        </a>
+    </div>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.assessment') }}" class="tab-nav-item active" style="color: #007bff; font-weight: bold;">科创竞赛参与与获奖数据</a>
+    <a href="{{ url_for('school_admin.assessment_score_aggrid') }}" class="tab-nav-item">年度考核分数统计</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>科创竞赛参与与获奖数据</h2>
+    </div>
+    <div class="card-body">
+        <!-- 挑战杯系列赛事表格（主赛道+配套活动合并） -->
+        <div style="margin-bottom: var(--spacing-lg);">
+            <h3 style="margin-bottom: var(--spacing-md); color: var(--primary-color);">一、"挑战杯"系列赛事</h3>
+            <div id="challengeCupGrid" class="ag-theme-alpine assessment-grid-container"></div>
+        </div>
+        
+        <!-- 红旅赛道表格 -->
+        <div style="margin-bottom: var(--spacing-lg);">
+            <h3 style="margin-bottom: var(--spacing-md); color: var(--primary-color);">二、中国国际大学生创新大赛"青年红色筑梦之旅"（红旅）赛道</h3>
+            <div id="redTravelGrid" class="ag-theme-alpine assessment-grid-container"></div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- AG Grid Community JS -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/dist/ag-grid-community.min.js"></script>
+<script>
+// 保存数据函数
+function saveData(fieldType, college, value, year) {
+    let url = '';
+    if (fieldType.startsWith('requirement_') || fieldType.startsWith('special_notes_') || fieldType.startsWith('activities_notes')) {
+        url = '{{ url_for("school_admin.save_assessment_config") }}';
+    } else {
+        url = '{{ url_for("school_admin.save_assessment_data") }}';
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            year: year,
+            college: college,
+            field_type: fieldType,
+            value: value
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('保存成功:', fieldType, value);
+        } else {
+            console.error('保存失败:', data.message);
+            alert('保存失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('保存错误:', error);
+        alert('保存错误: ' + error.message);
+    });
+}
+
+// 通用的数字编辑器配置（使用AG Grid内置编辑器）
+function getNumberEditorConfig() {
+    return {
+        cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        }
+    };
+}
+
+// 文本编辑器配置
+function getTextEditorConfig() {
+    return {
+        cellEditor: 'agTextCellEditor',
+        cellEditorParams: {
+            useFormatter: false
+        }
+    };
+}
+
+// ========== 挑战杯系列赛事表格（主赛道+配套活动合并） ==========
+const challengeCupData = [
+    {% for college in colleges %}
+    {% set stats = college_stats.get(college, {}) %}
+    {% set challenge_cup = stats.get('challenge_cup', {}) %}
+    {% set activities = stats.get('challenge_cup_activities', {}) %}
+    {% set activities_national = activities.get('national_awards', {}) %}
+    {
+        index: {{ loop.index }},
+        college: "{{ college }}",
+        requirement: {{ challenge_cup.get('requirement') if challenge_cup.get('requirement') is not none else 0 }},
+        mainRegistration: {{ challenge_cup.get('registration_count', 0) }},
+        schoolGold: {{ challenge_cup.get('school_awards', {}).get('gold', 0) }},
+        schoolSilver: {{ challenge_cup.get('school_awards', {}).get('silver', 0) }},
+        schoolBronze: {{ challenge_cup.get('school_awards', {}).get('bronze', 0) }},
+        provincialGold: {{ challenge_cup.get('provincial_awards', {}).get('gold', 0) }},
+        provincialSilver: {{ challenge_cup.get('provincial_awards', {}).get('silver', 0) }},
+        provincialBronze: {{ challenge_cup.get('provincial_awards', {}).get('bronze', 0) }},
+        mainNationalGold: {{ challenge_cup.get('national_awards', {}).get('gold', 0) }},
+        mainNationalSilver: {{ challenge_cup.get('national_awards', {}).get('silver', 0) }},
+        mainNationalBronze: {{ challenge_cup.get('national_awards', {}).get('bronze', 0) }},
+        mainTotalAwards: {{ challenge_cup.get('total_awards', 0) }},
+        activitiesRegistration: {{ activities.get('registration_count', 0) }},
+        activitiesNationalGold: {{ activities_national.get('gold', 0) }},
+        activitiesNationalSilver: {{ activities_national.get('silver', 0) }},
+        activitiesNationalBronze: {{ activities_national.get('bronze', 0) }},
+        specialNotes: "{{ challenge_cup.get('special_notes', '')|replace('"', '\\"')|replace('\n', '\\n') }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const challengeCupColumnDefs = [
+    {
+        headerName: '序号',
+        field: 'index',
+        pinned: 'left',
+        width: 80,
+        editable: false,
+        lockPosition: true,
+        cellStyle: { fontWeight: 'bold', textAlign: 'center' }
+    },
+    {
+        headerName: '学院',
+        field: 'college',
+        pinned: 'left',
+        width: 200,
+        editable: false,
+        lockPosition: true,
+        cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+    },
+    {
+        headerName: '任务要求',
+        field: 'requirement',
+        width: 100,
+        editable: true,
+        cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+        onCellValueChanged: function(params) {
+            saveData('requirement_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+        }
+    },
+    {
+        headerName: '主赛道',
+        children: [
+            {
+                headerName: '报名数',
+                field: 'mainRegistration',
+                width: 90,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+                },
+                onCellValueChanged: function(params) {
+                    saveData('registration_count_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '校级获奖',
+        children: [
+            { 
+                headerName: '金奖', 
+                field: 'schoolGold', 
+                width: 80, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('school_gold_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            { 
+                headerName: '银奖', 
+                field: 'schoolSilver', 
+                width: 80, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('school_silver_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            { 
+                headerName: '铜奖', 
+                field: 'schoolBronze', 
+                width: 80, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('school_bronze_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+    {
+        headerName: '省级获奖',
+        children: [
+            { 
+                headerName: '金奖', 
+                field: 'provincialGold', 
+                width: 80, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('provincial_gold_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            { 
+                headerName: '银奖', 
+                field: 'provincialSilver', 
+                width: 80, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('provincial_silver_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            { 
+                headerName: '铜奖', 
+                field: 'provincialBronze', 
+                width: 80, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('provincial_bronze_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+    {
+        headerName: '国家级获奖',
+        children: [
+            { 
+                headerName: '金奖', 
+                field: 'mainNationalGold', 
+                width: 90, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('national_gold_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            { 
+                headerName: '银奖', 
+                field: 'mainNationalSilver', 
+                width: 90, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('national_silver_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            { 
+                headerName: '铜奖', 
+                field: 'mainNationalBronze', 
+                width: 90, 
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('national_bronze_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+            {
+                headerName: '获奖总数',
+                field: 'mainTotalAwards',
+                width: 100,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+                },
+                onCellValueChanged: function(params) {
+                    saveData('total_awards_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+    {
+        headerName: '配套活动',
+        children: [
+            {
+                headerName: '报名数',
+                field: 'activitiesRegistration',
+                width: 100,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+                },
+                onCellValueChanged: function(params) {
+                    saveData('activities_registration_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '国家级获奖',
+                children: [
+                    {
+                        headerName: '金奖',
+                        field: 'activitiesNationalGold',
+                        width: 100,
+                        editable: true,
+                        cellEditor: 'agNumberCellEditor',
+                        cellEditorParams: { min: 0 },
+                        valueParser: function(params) {
+                            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+                        },
+                        onCellValueChanged: function(params) {
+                            saveData('activities_national_gold', params.data.college, params.newValue || '', {{ selected_year }});
+                        }
+                    },
+                    {
+                        headerName: '银奖',
+                        field: 'activitiesNationalSilver',
+                        width: 100,
+                        editable: true,
+                        cellEditor: 'agNumberCellEditor',
+                        cellEditorParams: { min: 0 },
+                        valueParser: function(params) {
+                            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+                        },
+                        onCellValueChanged: function(params) {
+                            saveData('activities_national_silver', params.data.college, params.newValue || '', {{ selected_year }});
+                        }
+                    },
+                    {
+                        headerName: '铜奖',
+                        field: 'activitiesNationalBronze',
+                        width: 100,
+                        editable: true,
+                        cellEditor: 'agNumberCellEditor',
+                        cellEditorParams: { min: 0 },
+                        valueParser: function(params) {
+                            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+                        },
+                        onCellValueChanged: function(params) {
+                            saveData('activities_national_bronze', params.data.college, params.newValue || '', {{ selected_year }});
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        headerName: '总计',
+        children: [
+            {
+                headerName: '报名总数',
+                width: 100,
+                editable: false,
+                cellStyle: { fontWeight: 'bold', textAlign: 'center' },
+                valueGetter: function(params) {
+                    const main = params.data.mainRegistration || 0;
+                    const activities = params.data.activitiesRegistration || 0;
+                    return main + activities;
+                }
+            },
+            {
+                headerName: '获奖总数',
+                width: 100,
+                editable: false,
+                cellStyle: { fontWeight: 'bold', textAlign: 'center' },
+                valueGetter: function(params) {
+                    const main = params.data.mainTotalAwards || 0;
+                    const activitiesGold = params.data.activitiesNationalGold || 0;
+                    const activitiesSilver = params.data.activitiesNationalSilver || 0;
+                    const activitiesBronze = params.data.activitiesNationalBronze || 0;
+                    const activitiesTotal = activitiesGold + activitiesSilver + activitiesBronze;
+                    return main + activitiesTotal;
+                }
+            }
+        ]
+    },
+    {
+        headerName: '挑战杯系列赛事报名总数',
+        width: 180,
+        editable: false,
+        cellStyle: { fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f0f0f0' },
+        valueGetter: function(params) {
+            const main = params.data.mainRegistration || 0;
+            const activities = params.data.activitiesRegistration || 0;
+            return main + activities;
+        }
+    },
+    {
+        headerName: '挑战杯系列赛事获奖总数',
+        width: 180,
+        editable: false,
+        cellStyle: { fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f0f0f0' },
+        valueGetter: function(params) {
+            const main = params.data.mainTotalAwards || 0;
+            const activitiesGold = params.data.activitiesNationalGold || 0;
+            const activitiesSilver = params.data.activitiesNationalSilver || 0;
+            const activitiesBronze = params.data.activitiesNationalBronze || 0;
+            const activitiesTotal = activitiesGold + activitiesSilver + activitiesBronze;
+            return main + activitiesTotal;
+        }
+    },
+    {
+        headerName: '特殊情况备注',
+        field: 'specialNotes',
+        width: 200,
+        editable: true,
+        cellEditor: 'agTextCellEditor',
+        cellEditorParams: {
+            useFormatter: false
+        },
+        cellStyle: { whiteSpace: 'normal', wordWrap: 'break-word', textAlign: 'left' },
+        autoHeight: true,
+        onCellValueChanged: function(params) {
+            saveData('special_notes_challenge_cup', params.data.college, params.newValue || '', {{ selected_year }});
+        }
+    }
+];
+
+const challengeCupGridOptions = {
+    columnDefs: challengeCupColumnDefs,
+    rowData: challengeCupData,
+    defaultColDef: {
+        sortable: true,
+        resizable: true,
+        filter: false,
+        editable: false
+    },
+    suppressRowClickSelection: true,
+    animateRows: true,
+    rowHeight: 40,
+    headerHeight: 60,
+    enableCellChangeFlash: true,
+    singleClickEdit: true,
+    stopEditingWhenCellsLoseFocus: true,
+    suppressHorizontalScroll: false,
+    suppressSizeToFit: true
+};
+
+// ========== 红旅赛道表格 ==========
+const redTravelData = [
+    {% for college in colleges %}
+    {% set stats = college_stats.get(college, {}) %}
+    {% set red_travel = stats.get('red_travel', {}) %}
+    {
+        index: {{ loop.index }},
+        college: "{{ college }}",
+        requirement: {{ red_travel.get('requirement') if red_travel.get('requirement') is not none else 0 }},
+        registration: {{ red_travel.get('registration_count', 0) }},
+        schoolGold: {{ red_travel.get('school_awards', {}).get('gold', 0) }},
+        schoolSilver: {{ red_travel.get('school_awards', {}).get('silver', 0) }},
+        schoolBronze: {{ red_travel.get('school_awards', {}).get('bronze', 0) }},
+        provincialGold: {{ red_travel.get('provincial_awards', {}).get('gold', 0) }},
+        provincialSilver: {{ red_travel.get('provincial_awards', {}).get('silver', 0) }},
+        provincialBronze: {{ red_travel.get('provincial_awards', {}).get('bronze', 0) }},
+        nationalGold: {{ red_travel.get('national_awards', {}).get('gold', 0) }},
+        nationalSilver: {{ red_travel.get('national_awards', {}).get('silver', 0) }},
+        nationalBronze: {{ red_travel.get('national_awards', {}).get('bronze', 0) }},
+        totalAwards: {{ red_travel.get('total_awards', 0) }},
+        specialNotes: "{{ red_travel.get('special_notes', '')|replace('"', '\\"')|replace('\n', '\\n') }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const redTravelColumnDefs = [
+    {
+        headerName: '序号',
+        field: 'index',
+        pinned: 'left',
+        width: 80,
+        editable: false,
+        lockPosition: true,
+        cellStyle: { fontWeight: 'bold', textAlign: 'center' }
+    },
+    {
+        headerName: '学院',
+        field: 'college',
+        pinned: 'left',
+        width: 200,
+        editable: false,
+        lockPosition: true,
+        cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+    },
+    {
+        headerName: '任务要求',
+        field: 'requirement',
+        width: 100,
+        editable: true,
+        cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+        onCellValueChanged: function(params) {
+            saveData('requirement_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+        }
+    },
+    {
+        headerName: '报名数',
+        field: 'registration',
+        width: 90,
+        editable: true,
+        cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+        onCellValueChanged: function(params) {
+            saveData('registration_count_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+        }
+    },
+    {
+        headerName: '校级获奖',
+        children: [
+            {
+                headerName: '金奖',
+                field: 'schoolGold',
+                width: 80,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('school_gold_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '银奖',
+                field: 'schoolSilver',
+                width: 80,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('school_silver_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '铜奖',
+                field: 'schoolBronze',
+                width: 80,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('school_bronze_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+    {
+        headerName: '省级获奖',
+        children: [
+            {
+                headerName: '金奖',
+                field: 'provincialGold',
+                width: 80,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('provincial_gold_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '银奖',
+                field: 'provincialSilver',
+                width: 80,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('provincial_silver_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '铜奖',
+                field: 'provincialBronze',
+                width: 80,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('provincial_bronze_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+    {
+        headerName: '国家级获奖',
+        children: [
+            {
+                headerName: '金奖',
+                field: 'nationalGold',
+                width: 90,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('national_gold_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '银奖',
+                field: 'nationalSilver',
+                width: 90,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('national_silver_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            },
+            {
+                headerName: '铜奖',
+                field: 'nationalBronze',
+                width: 90,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+                onCellValueChanged: function(params) {
+                    saveData('national_bronze_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+                }
+            }
+        ]
+    },
+    {
+        headerName: '获奖总数',
+        field: 'totalAwards',
+        width: 100,
+        editable: true,
+        cellEditor: 'agNumberCellEditor',
+        cellEditorParams: { min: 0 },
+        valueParser: function(params) {
+            return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseInt(params.newValue);
+        },
+        onCellValueChanged: function(params) {
+            saveData('total_awards_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+        }
+    },
+    {
+        headerName: '特殊情况备注',
+        field: 'specialNotes',
+        width: 200,
+        editable: true,
+        cellEditor: 'agTextCellEditor',
+        cellEditorParams: {
+            useFormatter: false
+        },
+        cellStyle: { whiteSpace: 'normal', wordWrap: 'break-word', textAlign: 'left' },
+        autoHeight: true,
+        onCellValueChanged: function(params) {
+            saveData('special_notes_red_travel', params.data.college, params.newValue || '', {{ selected_year }});
+        }
+    }
+];
+
+const redTravelGridOptions = {
+    columnDefs: redTravelColumnDefs,
+    rowData: redTravelData,
+    defaultColDef: {
+        sortable: true,
+        resizable: true,
+        filter: false,
+        editable: false
+    },
+    suppressRowClickSelection: true,
+    animateRows: true,
+    rowHeight: 40,
+    headerHeight: 60,
+    enableCellChangeFlash: true,
+    singleClickEdit: true,
+    stopEditingWhenCellsLoseFocus: true,
+    suppressHorizontalScroll: false,
+    suppressSizeToFit: true
+};
+
+// 初始化所有网格
+document.addEventListener('DOMContentLoaded', function() {
+    new agGrid.Grid(document.querySelector('#challengeCupGrid'), challengeCupGridOptions);
+    new agGrid.Grid(document.querySelector('#redTravelGrid'), redTravelGridOptions);
+});
+</script>
+{% endblock %}
+

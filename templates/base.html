@@ -17,9 +17,42 @@
             </div>
             {% if current_user.is_authenticated %}
             <div class="navbar-menu">
-                <div class="navbar-item user-info">
-                    <span>{{ current_user.real_name }}{% if current_user.work_id %} ({{ current_user.work_id }}){% endif %}</span>
+                {% set all_roles = current_user.get_all_roles() %}
+                {% set current_role = session.get('current_role', current_user.role) %}
+                {% if all_roles|length > 1 %}
+                <div class="navbar-item user-info" style="position: relative;">
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <span>{{ current_user.real_name }}{% if current_user.work_id %} ({{ current_user.work_id }}){% endif %}</span>
+                        <div style="position: relative;">
+                            <button type="button" onclick="toggleRoleDropdown()" class="role-selector-btn" style="background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                {% if current_role == 'student' %}学生
+                                {% elif current_role == 'college_admin' %}学院管理员
+                                {% elif current_role == 'school_admin' %}校级管理员
+                                {% elif current_role == 'judge' %}校外评委
+                                {% else %}{{ current_role }}{% endif %} ▼
+                            </button>
+                            <div id="role-dropdown" class="role-dropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 4px; background: white; border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1001; min-width: 140px; overflow: hidden;">
+                                {% for role in all_roles %}
+                                <form method="POST" action="{{ url_for('auth.switch_role') }}" style="margin: 0;">
+                                    <input type="hidden" name="role" value="{{ role }}">
+                                    <button type="submit" class="role-dropdown-item {% if role == current_role %}active{% endif %}" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: {% if role == current_role %}var(--primary-color){% else %}white{% endif %}; color: {% if role == current_role %}white{% else %}var(--text-primary){% endif %}; cursor: pointer; font-size: 0.875rem;">
+                                        {% if role == 'student' %}学生
+                                        {% elif role == 'college_admin' %}学院管理员
+                                        {% elif role == 'school_admin' %}校级管理员
+                                        {% elif role == 'judge' %}校外评委
+                                        {% else %}{{ role }}{% endif %}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                {% else %}
+                <div class="navbar-item user-info">
+                    <span>{{ current_user.real_name }}{% if current_user.work_id %} ({{ current_user.work_id }}){% endif %} - {% if current_user.role == 'student' %}学生{% elif current_user.role == 'college_admin' %}学院管理员{% elif current_user.role == 'school_admin' %}校级管理员{% elif current_user.role == 'judge' %}校外评委{% else %}{{ current_user.role }}{% endif %}</span>
+                </div>
+                {% endif %}
             </div>
             {% else %}
             <div class="navbar-menu">
@@ -84,5 +117,73 @@
     </footer>
 
     {% block extra_js %}{% endblock %}
+    <script>
+    // 密码显示/隐藏切换功能
+    function initPasswordToggle() {
+        // 查找所有密码输入框
+        const passwordInputs = document.querySelectorAll('input[type="password"]');
+        
+        passwordInputs.forEach(function(input) {
+            // 如果已经包装过了，跳过
+            if (input.parentElement.classList.contains('password-input-wrapper')) {
+                return;
+            }
+            
+            // 创建包装容器
+            const wrapper = document.createElement('div');
+            wrapper.className = 'password-input-wrapper';
+            
+            // 创建切换按钮
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'password-toggle-btn';
+            toggleBtn.setAttribute('aria-label', '显示/隐藏密码');
+            toggleBtn.setAttribute('title', '显示/隐藏密码');
+            
+            // 将输入框移到包装容器中
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+            wrapper.appendChild(toggleBtn);
+            
+            // 切换密码显示/隐藏
+            toggleBtn.addEventListener('click', function() {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    toggleBtn.classList.add('showing');
+                    toggleBtn.setAttribute('aria-label', '隐藏密码');
+                } else {
+                    input.type = 'password';
+                    toggleBtn.classList.remove('showing');
+                    toggleBtn.setAttribute('aria-label', '显示密码');
+                }
+            });
+        });
+    }
+    
+    // 页面加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPasswordToggle);
+    } else {
+        initPasswordToggle();
+    }
+    
+    {% if current_user.is_authenticated %}
+    function toggleRoleDropdown() {
+        const dropdown = document.getElementById('role-dropdown');
+        if (dropdown) {
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+    
+    // 点击外部关闭下拉菜单
+    document.addEventListener('click', function(event) {
+        const dropdown = document.getElementById('role-dropdown');
+        const button = event.target.closest('.role-selector-btn');
+        if (dropdown && !button && !event.target.closest('.role-dropdown')) {
+            dropdown.style.display = 'none';
+        }
+    });
+    {% endif %}
+    </script>
 </body>
 </html>

@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from utils.timezone import beijing_now
 
 # db 将在 app.py 中初始化并导入
 db = SQLAlchemy()
@@ -89,11 +90,13 @@ class User(UserMixin, db.Model):
     contact_info = db.Column(db.String(20), nullable=True)  # 联系方式
     role = db.Column(db.String(20), nullable=False, default=UserRole.STUDENT)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=beijing_now)
+    last_login = db.Column(db.DateTime, nullable=True)  # 最后登录时间（北京时间）
     
     # 关系
     teams = db.relationship('TeamMember', back_populates='user', lazy='dynamic')
     judge_assignments = db.relationship('JudgeAssignment', back_populates='judge', lazy='dynamic')
+    additional_roles = db.relationship('UserRoleAssignment', back_populates='user', cascade='all, delete-orphan', lazy='dynamic')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -101,8 +104,38 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
     
+    def has_role(self, role):
+        """检查用户是否拥有指定角色（包括主角色和额外角色）"""
+        if self.role == role:
+            return True
+        return self.additional_roles.filter_by(role=role).first() is not None
+    
+    def get_all_roles(self):
+        """获取用户的所有角色（包括主角色和额外角色）"""
+        roles = [self.role]
+        roles.extend([ur.role for ur in self.additional_roles.all()])
+        return list(set(roles))  # 去重
+    
     def __repr__(self):
         return f'<User {self.username}>'
+
+# 用户额外角色关联表（多对多：用户-角色）
+class UserRoleAssignment(db.Model):
+    """用户额外角色关联表（除了主角色role字段外的额外角色）"""
+    __tablename__ = 'user_roles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False)  # 角色名称
+    created_at = db.Column(db.DateTime, default=beijing_now)
+    
+    # 关系
+    user = db.relationship('User', back_populates='additional_roles')
+    
+    __table_args__ = (db.UniqueConstraint('user_id', 'role', name='unique_user_role'),)
+    
+    def __repr__(self):
+        return f'<UserRoleAssignment {self.user_id}-{self.role}>'
 
 # 竞赛模型
 class Competition(db.Model):
@@ -119,7 +152,11 @@ class Competition(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_published = db.Column(db.Boolean, default=False)  # 是否已发布（只有已发布的竞赛学生才能看到）
     final_quota = db.Column(db.Integer, nullable=True)  # 决赛名额（排名前几可以进入决赛）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    defense_order_start = db.Column(db.DateTime, nullable=True)  # 答辩顺序抽取开始时间
+    defense_order_end = db.Column(db.DateTime, nullable=True)  # 答辩顺序抽取结束时间
+    qq_group_number = db.Column(db.String(50), nullable=True)  # QQ群号
+    qq_group_qrcode = db.Column(db.String(500), nullable=True)  # QQ群二维码图片路径
+    created_at = db.Column(db.DateTime, default=beijing_now)
     
     # 关系
     tracks = db.relationship('Track', back_populates='competition', lazy='dynamic')
@@ -154,7 +191,7 @@ class Team(db.Model):
     name = db.Column(db.String(200), nullable=False, index=True)
     leader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     competition_id = db.Column(db.Integer, db.ForeignKey('competitions.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=beijing_now)
     
     # 关系
     leader = db.relationship('User', foreign_keys=[leader_id])
@@ -174,7 +211,7 @@ class TeamMember(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('teams.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     role = db.Column(db.String(20), default='member')  # leader, member
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=beijing_now)
     
     # 关系
     team = db.relationship('Team', back_populates='members')
@@ -208,11 +245,12 @@ class Project(db.Model):
     instructor_phone = db.Column(db.String(20), nullable=True)  # 指导老师联系方式
     status = db.Column(db.String(20), default=ReviewStatus.DRAFT, index=True)
     is_final = db.Column(db.Boolean, default=False)  # 是否进入校赛决赛
+    allow_award_collection = db.Column(db.Boolean, default=False)  # 是否开放奖项收集（允许学生上传省赛、国赛奖状）
     college_review_comment = db.Column(db.Text)  # 学院审核备注
     school_review_comment = db.Column(db.Text)  # 校级审核备注
     defense_order = db.Column(db.Integer, nullable=True)  # 答辩顺序（抽签结果）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=beijing_now)
+    updated_at = db.Column(db.DateTime, default=beijing_now, onupdate=beijing_now)
     
     # 关系
     team = db.relationship('Team', back_populates='projects')
@@ -222,6 +260,7 @@ class Project(db.Model):
     judge_assignments = db.relationship('JudgeAssignment', back_populates='project', lazy='dynamic', cascade='all, delete-orphan')
     scores = db.relationship('Score', back_populates='project', lazy='dynamic', cascade='all, delete-orphan')
     awards = db.relationship('Award', back_populates='project', lazy='dynamic', cascade='all, delete-orphan')
+    external_awards = db.relationship('ExternalAward', back_populates='project', lazy='dynamic', cascade='all, delete-orphan')
     project_members = db.relationship('ProjectMember', back_populates='project', lazy='dynamic', cascade='all, delete-orphan', order_by='ProjectMember.order')
     
     def all_members_confirmed(self):
@@ -252,7 +291,7 @@ class ProjectMember(db.Model):
     member_email = db.Column(db.String(120), nullable=True)  # 电子邮箱
     is_confirmed = db.Column(db.Boolean, default=False)  # 是否已确认
     confirmed_at = db.Column(db.DateTime, nullable=True)  # 确认时间
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=beijing_now)
     
     # 关系
     project = db.relationship('Project', back_populates='project_members')
@@ -309,7 +348,7 @@ class JudgeAssignment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     judge_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
-    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    assigned_at = db.Column(db.DateTime, default=beijing_now)
     is_active = db.Column(db.Boolean, default=True)
     
     # 关系
@@ -335,8 +374,8 @@ class Score(db.Model):
     social_value_score = db.Column(db.Float)  # 社会价值得分
     presentation_score = db.Column(db.Float)  # 展示效果得分
     comment = db.Column(db.Text)  # 评语
-    scored_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    scored_at = db.Column(db.DateTime, default=beijing_now)
+    updated_at = db.Column(db.DateTime, default=beijing_now, onupdate=beijing_now)
     
     # 关系
     project = db.relationship('Project', back_populates='scores')
@@ -347,20 +386,109 @@ class Score(db.Model):
     def __repr__(self):
         return f'<Score {self.project_id}-{self.judge_id}: {self.score_value}>'
 
-# 奖项模型
+# 奖项模型（校赛证书）
 class Award(db.Model):
-    """奖项模型"""
+    """奖项模型（校赛证书）"""
     __tablename__ = 'awards'
     
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     award_name = db.Column(db.String(100), nullable=False)  # 奖项名称（如：一等奖、二等奖）
     certificate_path = db.Column(db.String(500))  # 证书文件路径
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=beijing_now)
     
     # 关系
     project = db.relationship('Project', back_populates='awards')
     
     def __repr__(self):
         return f'<Award {self.award_name} for Project {self.project_id}>'
+
+# 外部奖项模型（省赛、国赛奖状，由学生上传）
+class ExternalAward(db.Model):
+    """外部奖项模型（省赛、国赛奖状）"""
+    __tablename__ = 'external_awards'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    award_level = db.Column(db.String(50), nullable=False)  # 奖项级别：省赛、国赛
+    award_name = db.Column(db.String(100), nullable=False)  # 奖项名称（如：一等奖、二等奖、三等奖）
+    award_organization = db.Column(db.String(200), nullable=True)  # 颁奖机构
+    award_date = db.Column(db.Date, nullable=True)  # 获奖日期
+    certificate_file = db.Column(db.String(500), nullable=True)  # 奖状文件路径
+    description = db.Column(db.Text, nullable=True)  # 其他说明
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # 上传者（队长）
+    created_at = db.Column(db.DateTime, default=beijing_now)
+    updated_at = db.Column(db.DateTime, default=beijing_now, onupdate=beijing_now)
+    
+    # 关系
+    project = db.relationship('Project', back_populates='external_awards')
+    uploader = db.relationship('User')
+    
+    def __repr__(self):
+        return f'<ExternalAward {self.award_level}-{self.award_name} for Project {self.project_id}>'
+
+# 考核配置模型（存储任务要求、配套活动、特殊情况备注等）
+class AssessmentConfig(db.Model):
+    """考核配置模型，用于存储年度任务要求和手动输入的奖项数据"""
+    __tablename__ = 'assessment_config'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, nullable=False)  # 年度
+    college = db.Column(db.String(100), nullable=False)  # 学院
+    
+    # 任务要求
+    red_travel_requirement = db.Column(db.Integer, nullable=True)  # 红旅任务要求数
+    challenge_cup_requirement = db.Column(db.Integer, nullable=True)  # 挑战杯任务要求数
+    
+    # 手动输入数据（现在用于存储配套活动和特殊情况备注，以及可编辑的统计数据）
+    challenge_cup_activities = db.Column(db.Text, nullable=True)  # 挑战杯配套活动（JSON格式存储，现在用于存储配套活动备注）
+    challenge_cup_special_notes = db.Column(db.Text, nullable=True)  # 挑战杯特殊情况备注
+    red_travel_special_notes = db.Column(db.Text, nullable=True)  # 红旅特殊情况备注
+    
+    # 新增字段用于存储可编辑的统计数据
+    # 挑战杯主赛道
+    challenge_cup_main_registration = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_school_gold = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_school_silver = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_school_bronze = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_provincial_gold = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_provincial_silver = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_provincial_bronze = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_national_gold = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_national_silver = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_national_bronze = db.Column(db.Integer, nullable=True)
+    challenge_cup_main_total_awards = db.Column(db.Integer, nullable=True)
+    
+    # 挑战杯配套活动
+    challenge_cup_activities_registration = db.Column(db.Integer, nullable=True)
+    challenge_cup_activities_national_gold = db.Column(db.Integer, nullable=True)
+    challenge_cup_activities_national_silver = db.Column(db.Integer, nullable=True)
+    challenge_cup_activities_national_bronze = db.Column(db.Integer, nullable=True)
+    
+    # 红旅赛道
+    red_travel_registration = db.Column(db.Integer, nullable=True)
+    red_travel_school_gold = db.Column(db.Integer, nullable=True)
+    red_travel_school_silver = db.Column(db.Integer, nullable=True)
+    red_travel_school_bronze = db.Column(db.Integer, nullable=True)
+    red_travel_provincial_gold = db.Column(db.Integer, nullable=True)
+    red_travel_provincial_silver = db.Column(db.Integer, nullable=True)
+    red_travel_provincial_bronze = db.Column(db.Integer, nullable=True)
+    red_travel_national_gold = db.Column(db.Integer, nullable=True)
+    red_travel_national_silver = db.Column(db.Integer, nullable=True)
+    red_travel_national_bronze = db.Column(db.Integer, nullable=True)
+    red_travel_total_awards = db.Column(db.Integer, nullable=True)
+    
+    # 手动编辑的分数（如果为空则使用计算值）
+    red_travel_participation_score = db.Column(db.Float, nullable=True)  # 红旅参与得分
+    red_travel_award_score = db.Column(db.Float, nullable=True)  # 红旅获奖得分
+    challenge_cup_participation_score = db.Column(db.Float, nullable=True)  # 挑战杯参与得分
+    challenge_cup_award_score = db.Column(db.Float, nullable=True)  # 挑战杯获奖得分
+    
+    created_at = db.Column(db.DateTime, default=beijing_now)
+    updated_at = db.Column(db.DateTime, default=beijing_now, onupdate=beijing_now)
+    
+    __table_args__ = (db.UniqueConstraint('year', 'college', name='unique_year_college'),)
+    
+    def __repr__(self):
+        return f'<AssessmentConfig {self.year}-{self.college}>'
 

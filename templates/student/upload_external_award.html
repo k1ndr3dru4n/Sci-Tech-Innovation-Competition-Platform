@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}上传省赛/国赛奖状 - 学生{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>上传省赛/国赛奖状</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div style="margin-bottom: var(--spacing-md);">
+            <h3 style="margin: 0 0 var(--spacing-xs) 0;">
+                <a href="{{ url_for('student.view_project', project_id=project.id) }}" style="color: var(--primary-color); text-decoration: none;">{{ project.title }}</a>
+            </h3>
+            <p style="margin: 0; color: var(--text-secondary); font-size: 0.9em;">{{ project.competition.name }}</p>
+        </div>
+        
+        {% if existing_awards %}
+        <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+            <h4 style="margin: 0 0 var(--spacing-md) 0; font-size: 1em;">已上传的省赛/国赛奖状</h4>
+            <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                {% for ext_award in existing_awards %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm); background: var(--surface-color); border-radius: var(--radius-xs);">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500; color: var(--primary-color);">{{ ext_award.award_level }} - {{ ext_award.award_name }}</div>
+                    </div>
+                    <form method="POST" action="{{ url_for('student.delete_external_award', award_id=ext_award.id) }}" style="display: inline-block;" onsubmit="return confirm('确定要删除这个省赛/国赛奖状吗？');">
+                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.award_level.label(class="form-label") }}
+                {{ form.award_level(class="form-control") }}
+                {% if form.award_level.errors %}
+                    <div class="text-danger" style="font-size: 0.875rem; margin-top: 4px;">
+                        {% for error in form.award_level.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.award_name.label(class="form-label") }}
+                {{ form.award_name(class="form-control") }}
+                {% if form.award_name.errors %}
+                    <div class="text-danger" style="font-size: 0.875rem; margin-top: 4px;">
+                        {% for error in form.award_name.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.certificate_file.label(class="form-label") }}
+                {{ form.certificate_file(class="form-control") }}
+                <small class="form-text text-muted">支持PDF或图片文件（JPG、PNG、GIF）</small>
+                {% if form.certificate_file.errors %}
+                    <div class="text-danger" style="font-size: 0.875rem; margin-top: 4px;">
+                        {% for error in form.certificate_file.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control") }}
+                {% if form.description.errors %}
+                    <div class="text-danger" style="font-size: 0.875rem; margin-top: 4px;">
+                        {% for error in form.description.errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group" style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-lg);">
+                <button type="submit" class="btn btn-primary">提交</button>
+                <a href="{{ url_for('student.project_awards') }}" class="btn btn-secondary">返回</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}答辩顺序 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>答辩顺序</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.final_competition') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.final_competition' %}active{% endif %}">校赛决赛</a>
+    <a href="{{ url_for('school_admin.defense_order') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order' %}active{% endif %}">答辩顺序</a>
+    <a href="{{ url_for('school_admin.defense_order_time') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order_time' %}active{% endif %}">答辩顺序时间</a>
+    <a href="{{ url_for('school_admin.qq_group') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.qq_group' %}active{% endif %}">QQ群管理</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center;">
+    <form method="GET" action="{{ url_for('school_admin.defense_order') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <select name="competition_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;">
+                        <option value="">全部</option>
+                        {% for competition in competitions %}
+                        <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
+                            {{ competition.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.defense_order') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
+                </div>
+        </div>
+    </form>
+</div>
+
+{% if final_projects %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1000px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 80px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">答辩顺序</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 250px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in final_projects %}
+                    {% set project = item.project %}
+                    {% set competition = project.competition %}
+                    <tr data-project-id="{{ project.id }}">
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong style="color: var(--primary-color);">{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <span class="defense-order-value">
+                                {% if project.defense_order %}
+                                    <span class="badge badge-info">第{{ project.defense_order }}位</span>
+                                {% else %}
+                                    <span class="badge badge-warning">未抽取</span>
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">{{ project.title }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ competition.name }}">{{ competition.name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.college }}">{{ project.team.leader.college }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <input type="number" class="defense-order-input" value="{{ project.defense_order or '' }}" min="1" data-original-order="{{ project.defense_order or '' }}" style="width: 80px; padding: 4px; text-align: center; display: inline-block;">
+                            <button class="btn btn-sm btn-primary save-order-btn" onclick="saveOrder({{ project.id }}, this)">修改答辩顺序</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>没有找到符合条件的项目</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                请确保项目已进入校赛决赛
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function saveOrder(projectId, btn) {
+    const row = btn.closest('tr');
+    const input = row.querySelector('.defense-order-input');
+    const orderValue = row.querySelector('.defense-order-value');
+    const newOrder = parseInt(input.value);
+    
+    if (isNaN(newOrder) || newOrder < 1) {
+        alert('请输入有效的答辩顺序（大于等于1的整数）');
+        input.focus();
+        return;
+    }
+    
+    // 获取原始顺序（从data属性中获取，这是页面加载时的值）
+    const originalOrder = input.getAttribute('data-original-order');
+    const currentOrderText = originalOrder ? '第' + originalOrder + '位' : '未抽取';
+    
+    // 如果新顺序和原顺序相同，不需要修改
+    if (originalOrder && parseInt(originalOrder) === newOrder) {
+        alert('答辩顺序未发生变化');
+        return;
+    }
+    
+    if (!confirm('确定要将答辩顺序从' + currentOrderText + '修改为第' + newOrder + '位吗？如果该位置已被占用，将自动交换位置。')) {
+        return;
+    }
+    
+    fetch('{{ url_for("school_admin.update_defense_order") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            project_id: projectId,
+            defense_order: newOrder
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 刷新页面以显示最新的顺序（包括交换后的其他项目）
+            alert('答辩顺序已修改为第' + newOrder + '位。如果该位置被占用，已自动交换位置。');
+            window.location.reload();
+        } else {
+            alert('更新失败：' + (data.message || '未知错误'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新失败，请重试');
+    });
+}
+</script>
+{% endblock %}
+

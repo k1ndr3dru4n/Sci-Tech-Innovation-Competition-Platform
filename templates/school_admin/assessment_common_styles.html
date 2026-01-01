@@ -1,0 +1,211 @@
+<style>
+    /* 容器必须设置 overflow: auto/scroll，sticky才能生效 */
+    .assessment-table-container {
+        overflow: auto;
+        max-height: 80vh;
+        max-width: 100%;
+        position: relative;
+    }
+    
+    .assessment-table {
+        width: 100%;
+        border-collapse: collapse; /* 必须使用 collapse，separate 会破坏 sticky 布局 */
+        font-size: 0.75rem;
+    }
+    
+    .assessment-table th,
+    .assessment-table td {
+        padding: 3px 2px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        background-color: var(--surface-color);
+        box-sizing: border-box;
+    }
+    
+    /* 第一行表头 - 固定顶部，z-index: 20 */
+    .assessment-table thead tr:first-child th {
+        position: sticky;
+        top: 0;
+        background: var(--bg-secondary);
+        z-index: 20;
+        white-space: nowrap;
+    }
+    
+    /* 第二行表头 - 固定在第一行下方，z-index: 20，top值通过JS动态设置 */
+    .assessment-table thead tr:nth-child(2) th {
+        position: sticky;
+        background: var(--bg-secondary);
+        z-index: 20;
+        white-space: nowrap;
+        /* 不设置top，由JS动态设置 */
+    }
+    
+    /* 普通单元格 */
+    .assessment-table tbody td {
+        white-space: nowrap;
+    }
+    
+    /* ========== 固定列第一列 ========== */
+    /* 固定列第一列的普通单元格 - z-index: 10 */
+    .assessment-table tbody .col-fixed-1 {
+        position: sticky;
+        left: 0;
+        min-width: 50px;
+        width: 50px;
+        max-width: 50px;
+        background: var(--surface-color);
+        z-index: 10;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* 固定列第一列的表头 - 第一行 - z-index: 30（最高） */
+    .assessment-table thead tr:first-child .col-fixed-1 {
+        position: sticky;
+        left: 0;
+        top: 0;
+        min-width: 50px;
+        width: 50px;
+        max-width: 50px;
+        background: var(--bg-secondary);
+        z-index: 30;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* 固定列第一列的表头 - 第二行 - z-index: 30（最高），top值通过JS动态设置 */
+    .assessment-table thead tr:nth-child(2) .col-fixed-1 {
+        position: sticky;
+        left: 0;
+        min-width: 50px;
+        width: 50px;
+        max-width: 50px;
+        background: var(--bg-secondary);
+        z-index: 30;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* 不设置top，由JS动态设置 */
+    }
+    
+    /* ========== 固定列第二列 ========== */
+    /* 固定列第二列的普通单元格 - z-index: 10 */
+    .assessment-table tbody .col-fixed-2 {
+        position: sticky;
+        left: 50px;
+        min-width: 200px;
+        width: 200px;
+        max-width: 200px;
+        background: var(--surface-color);
+        z-index: 10;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-all;
+        text-align: left;
+        padding-left: 4px;
+        padding-right: 4px;
+        overflow-wrap: break-word;
+    }
+    
+    /* 固定列第二列的表头 - 第一行 - z-index: 30（最高） */
+    .assessment-table thead tr:first-child .col-fixed-2 {
+        position: sticky;
+        left: 50px;
+        top: 0;
+        min-width: 200px;
+        width: 200px;
+        max-width: 200px;
+        background: var(--bg-secondary);
+        z-index: 30;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-all;
+        text-align: left;
+        padding-left: 4px;
+        padding-right: 4px;
+        overflow-wrap: break-word;
+    }
+    
+    /* 固定列第二列的表头 - 第二行 - z-index: 30（最高），top值通过JS动态设置 */
+    .assessment-table thead tr:nth-child(2) .col-fixed-2 {
+        position: sticky;
+        left: 50px;
+        min-width: 200px;
+        width: 200px;
+        max-width: 200px;
+        background: var(--bg-secondary);
+        z-index: 30;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        white-space: normal;
+        word-wrap: break-word;
+        word-break: break-all;
+        text-align: left;
+        padding-left: 4px;
+        padding-right: 4px;
+        overflow-wrap: break-word;
+        /* 不设置top，由JS动态设置 */
+    }
+    
+    .assessment-table input[type="number"],
+    .assessment-table textarea {
+        width: 100%;
+        padding: 1px 2px;
+        border: 1px solid #ddd;
+        border-radius: 2px;
+        font-size: 0.75rem;
+        box-sizing: border-box;
+    }
+    
+    .assessment-table textarea {
+        min-width: 120px;
+        resize: both;
+    }
+</style>
+<script>
+(function() {
+    function updateStickyHeaders() {
+        document.querySelectorAll('.assessment-table-container').forEach(function(container) {
+            const table = container.querySelector('.assessment-table');
+            if (!table) return;
+            
+            const thead = table.querySelector('thead');
+            if (!thead) return;
+            
+            const firstRow = thead.querySelector('tr:first-child');
+            const secondRow = thead.querySelector('tr:nth-child(2)');
+            
+            if (!firstRow || !secondRow) return;
+            
+            // 使用 getBoundingClientRect() 获取更准确的高度
+            const firstRowRect = firstRow.getBoundingClientRect();
+            const firstRowHeight = firstRowRect.height;
+            
+            // 设置第二行表头的top值
+            const secondRowCells = secondRow.querySelectorAll('th');
+            secondRowCells.forEach(function(cell) {
+                cell.style.top = firstRowHeight + 'px';
+            });
+        });
+    }
+    
+    // DOM加载完成后执行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟执行以确保表格完全渲染
+            setTimeout(updateStickyHeaders, 100);
+        });
+    } else {
+        // DOM已加载，直接执行
+        setTimeout(updateStickyHeaders, 100);
+    }
+    
+    // 监听窗口大小变化，重新计算
+    window.addEventListener('resize', function() {
+        setTimeout(updateStickyHeaders, 100);
+    });
+})();
+</script>

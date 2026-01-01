@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}查看QQ群 - 学生{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>查看QQ群</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('student.draw_defense_order_page') }}" class="tab-nav-item {% if request.endpoint == 'student.draw_defense_order_page' %}active{% endif %}">答辩抽签</a>
+    <a href="{{ url_for('student.view_qq_group') }}" class="tab-nav-item {% if request.endpoint == 'student.view_qq_group' %}active{% endif %}">查看QQ群</a>
+</div>
+
+{% if competitions_with_qq %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">QQ群号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">QQ群二维码</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in competitions_with_qq %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ item.competition.name }}">{{ item.competition.name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if item.competition.qq_group_number %}
+                                <span style="font-weight: bold; color: var(--primary-color);">{{ item.competition.qq_group_number }}</span>
+                            {% else %}
+                                <span style="color: var(--text-secondary);">未设置</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if item.competition.qq_group_qrcode %}
+                                <img src="{{ url_for('uploaded_file', filename=item.competition.qq_group_qrcode.replace('\\', '/')) }}" 
+                                     alt="QQ群二维码" 
+                                     style="max-width: 200px; max-height: 200px; border: 1px solid var(--border-color); padding: 5px; background: white; cursor: pointer;"
+                                     onclick="window.open(this.src, '_blank')"
+                                     title="点击查看大图">
+                            {% else %}
+                                <span style="color: var(--text-secondary);">未设置</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>暂无QQ群信息</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                您参与的项目所属竞赛尚未设置QQ群信息
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

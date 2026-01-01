@@ -31,10 +31,14 @@ def save_uploaded_file(file, subfolder=''):
         file_path = upload_dir / unique_filename
         file.save(str(file_path))
         
+        # 确保file_path使用正斜杠（URL标准），即使在Windows上
+        relative_path = file_path.relative_to(Config.UPLOAD_FOLDER)
+        file_path_str = str(relative_path).replace('\\', '/')
+        
         return {
             'filename': unique_filename,
             'original_filename': filename,
-            'file_path': str(file_path.relative_to(Config.UPLOAD_FOLDER)),
+            'file_path': file_path_str,
             'file_size': os.path.getsize(file_path),
             'file_type': ext[1:].lower()
         }

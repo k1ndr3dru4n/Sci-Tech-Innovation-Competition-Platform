@@ -3,7 +3,7 @@
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, send_file
 from flask_login import login_required, current_user
-from models import db, Project, ReviewStatus, User, Team, Track, ProjectTrack, UserRole, Score, Award
+from models import db, Project, ReviewStatus, User, Team, Track, ProjectTrack, UserRole, Score, Award, ExternalAward
 from forms import ReviewForm, FilterForm
 from utils.decorators import college_admin_required
 from utils.export import export_detailed_projects_to_excel
@@ -99,12 +99,75 @@ def download_certificate(project_id, award_id):
         mimetype='image/png'
     )
 
-@college_admin_bp.route('/dashboard')
+@college_admin_bp.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 @college_admin_required
 def dashboard():
-    """学院管理员 dashboard - 显示基本信息"""
-    return render_template('college_admin/dashboard.html')
+    """学院管理员 dashboard - 显示基本信息和编辑表单"""
+    from forms import ProfileForm
+    from models import User
+    
+    form = ProfileForm()
+    
+    if form.validate_on_submit():
+        has_errors = False
+        
+        # 更新基本信息
+        current_user.real_name = form.real_name.data
+        # 邮箱为选填项，如果填写了则验证并更新
+        email_input = form.email.data.strip() if form.email.data else ''
+        # 如果邮箱值等于学工号，说明是浏览器自动填充的，忽略它
+        if email_input and email_input == current_user.work_id:
+            email_input = ''
+        if email_input:
+            # 检查邮箱是否被其他用户使用
+            existing_user = User.query.filter(
+                User.email == email_input,
+                User.id != current_user.id
+            ).first()
+            if existing_user:
+                flash('该邮箱已被其他用户使用', 'error')
+                has_errors = True
+            else:
+                current_user.email = email_input
+        else:
+            # 如果用户没有填写邮箱，保持原值不变
+            pass
+        
+        # 更新联系方式
+        current_user.contact_info = form.contact_info.data
+        
+        # 如果提供了新密码，验证旧密码并更新
+        if form.new_password.data:
+            if not form.old_password.data:
+                flash('请输入当前密码', 'error')
+                has_errors = True
+            elif not current_user.check_password(form.old_password.data):
+                flash('当前密码错误', 'error')
+                has_errors = True
+            elif form.new_password.data != form.confirm_password.data:
+                flash('两次新密码输入不一致', 'error')
+                has_errors = True
+            else:
+                current_user.set_password(form.new_password.data)
+        
+        if has_errors:
+            # 如果有错误，重新填充表单数据并渲染模板
+            form.real_name.data = current_user.real_name
+            form.email.data = ''
+            form.contact_info.data = current_user.contact_info
+            return render_template('college_admin/dashboard.html', form=form)
+        
+        db.session.commit()
+        flash('个人资料更新成功', 'success')
+        return redirect(url_for('college_admin.dashboard'))
+    
+    # 填充表单数据（GET 请求或验证失败时）
+    form.real_name.data = current_user.real_name
+    form.email.data = ''  # 邮箱不默认填写
+    form.contact_info.data = current_user.contact_info
+    
+    return render_template('college_admin/dashboard.html', form=form)
 
 @college_admin_bp.route('/review')
 @login_required
@@ -203,6 +266,45 @@ def review_project(project_id):
     
     return render_template('college_admin/review_project.html', project=project, form=form, scores=scores, awards=awards)
 
+@college_admin_bp.route('/award_statistics')
+@login_required
+@college_admin_required
+def award_statistics():
+    """奖项统计页面 - 显示该学院所有项目的奖项（包括校赛奖项和省赛/国赛奖状）"""
+    college = current_user.college
+    
+    # 获取该学院的所有项目（根据 push_college 字段）
+    projects = Project.query.filter_by(push_college=college).all()
+    
+    # 为每个项目获取奖项信息（包括校赛奖项和省赛/国赛奖状）
+    projects_with_awards = []
+    for project in projects:
+        awards = Award.query.filter_by(project_id=project.id).all()
+        external_awards = ExternalAward.query.filter_by(project_id=project.id).all()
+        
+        # 如果有任何奖项（校赛或省赛/国赛），就添加到列表中
+        if awards or external_awards:
+            projects_with_awards.append({
+                'project': project,
+                'awards': awards,
+                'external_awards': external_awards
+            })
+    
+    # 按创建时间倒序排序
+    projects_with_awards.sort(key=lambda x: x['project'].created_at, reverse=True)
+    
+    # 统计信息
+    total_projects = len(projects)
+    projects_with_award_count = len(projects_with_awards)
+    total_awards = sum(len(item['awards']) + len(item['external_awards']) for item in projects_with_awards)
+    
+    return render_template('college_admin/award_statistics.html', 
+                         projects_with_awards=projects_with_awards,
+                         college=college,
+                         total_projects=total_projects,
+                         projects_with_award_count=projects_with_award_count,
+                         total_awards=total_awards)
+
 @college_admin_bp.route('/students')
 @login_required
 @college_admin_required
@@ -241,10 +343,29 @@ def export_projects():
         flash('您的账户未设置学院信息，请联系管理员', 'error')
         return redirect(url_for('college_admin.projects'))
     
-    # 获取本学院的所有项目（包括待审核和已审核的）
-    projects = Project.query.filter(
-        Project.push_college == college
-    ).order_by(Project.created_at.desc()).all()
+    # 获取筛选条件
+    project_name = request.args.get('project_name', '').strip()
+    track_id = request.args.get('track_id', type=int)
+    status = request.args.get('status', '')
+    
+    # 基础查询：根据项目的 push_college 字段筛选本学院的项目
+    # 只显示已通过学院审核的项目（college_approved 及之后的状态）
+    query = Project.query.filter(
+        Project.push_college == college,
+        Project.status.in_([ReviewStatus.COLLEGE_APPROVED, ReviewStatus.FINAL_APPROVED, ReviewStatus.FINAL_REJECTED])
+    )
+    
+    # 应用筛选条件
+    if project_name:
+        query = query.filter(Project.title.contains(project_name))
+    
+    if track_id and track_id > 0:
+        query = query.join(ProjectTrack).join(Track).filter(Track.id == track_id)
+    
+    if status:
+        query = query.filter(Project.status == status)
+    
+    projects = query.order_by(Project.created_at.desc()).all()
     
     if not projects:
         flash('没有可导出的项目数据', 'info')

@@ -1,0 +1,62 @@
+<!-- 配置编辑表单（内嵌到assessment_data.html） -->
+<div class="card" style="margin-bottom: var(--spacing-lg);">
+    <div class="card-header">
+        <h3>统一配置设置（{{ selected_year }}年度）</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('school_admin.save_assessment_config') }}">
+            <input type="hidden" name="year" value="{{ selected_year }}">
+            
+            <!-- 任务要求设置 -->
+            <div style="margin-bottom: var(--spacing-md);">
+                <h4 style="margin-bottom: var(--spacing-sm); font-size: 1.1em;">任务要求设置</h4>
+                <div style="display: flex; gap: var(--spacing-lg); flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label for="red_travel_requirement" style="display: block; margin-bottom: var(--spacing-xs); font-weight: 500;">红旅参与任务要求：</label>
+                        <input type="number" id="red_travel_requirement" name="red_travel_requirement" 
+                               value="{{ unified_config.red_travel_requirement if unified_config else '' }}" 
+                               class="form-control" min="0" placeholder="请输入任务要求数">
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label for="challenge_cup_requirement" style="display: block; margin-bottom: var(--spacing-xs); font-weight: 500;">挑战杯参与任务要求：</label>
+                        <input type="number" id="challenge_cup_requirement" name="challenge_cup_requirement" 
+                               value="{{ unified_config.challenge_cup_requirement if unified_config else '' }}" 
+                               class="form-control" min="0" placeholder="请输入任务要求数">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 配套活动编辑 -->
+            <div style="margin-bottom: var(--spacing-md);">
+                <h4 style="margin-bottom: var(--spacing-sm); font-size: 1.1em;">挑战杯配套活动</h4>
+                <textarea name="challenge_cup_activities" id="challenge_cup_activities" 
+                          class="form-control" rows="5" 
+                          placeholder="请输入配套活动信息（如：揭榜挂帅、秦创原、机器人等专项赛的报名数及获奖情况）">{{ unified_config.challenge_cup_activities if unified_config and unified_config.challenge_cup_activities else '' }}</textarea>
+            </div>
+            
+            <!-- 特殊情况备注编辑 -->
+            <div style="margin-bottom: var(--spacing-md);">
+                <h4 style="margin-bottom: var(--spacing-sm); font-size: 1.1em;">特殊情况备注</h4>
+                <div style="display: flex; gap: var(--spacing-lg); flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <label for="challenge_cup_special_notes" style="display: block; margin-bottom: var(--spacing-xs); font-weight: 500;">挑战杯特殊情况备注：</label>
+                        <textarea name="challenge_cup_special_notes" id="challenge_cup_special_notes" 
+                                  class="form-control" rows="3" 
+                                  placeholder="请输入挑战杯特殊情况备注">{{ unified_config.challenge_cup_special_notes if unified_config and unified_config.challenge_cup_special_notes else '' }}</textarea>
+                    </div>
+                    <div style="flex: 1; min-width: 300px;">
+                        <label for="red_travel_special_notes" style="display: block; margin-bottom: var(--spacing-xs); font-weight: 500;">红旅特殊情况备注：</label>
+                        <textarea name="red_travel_special_notes" id="red_travel_special_notes" 
+                                  class="form-control" rows="3" 
+                                  placeholder="请输入红旅特殊情况备注">{{ unified_config.red_travel_special_notes if unified_config and unified_config.red_travel_special_notes else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: right; margin-top: var(--spacing-md);">
+                <button type="submit" class="btn btn-primary">保存配置</button>
+            </div>
+        </form>
+    </div>
+</div>
+

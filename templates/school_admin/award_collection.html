@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}奖项收集 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>奖项收集</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.award_collection') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.award_collection' %}active{% endif %}">奖项收集</a>
+    <a href="{{ url_for('school_admin.award_publish') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.award_publish' %}active{% endif %}">奖项发布</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center; margin-bottom: var(--spacing-md);">
+    <form method="GET" action="{{ url_for('school_admin.award_collection') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <select name="competition_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;">
+                        <option value="">全部</option>
+                        {% for competition in competitions %}
+                        <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
+                            {{ competition.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">项目名称:</label>
+                    <input type="text" name="project_name" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;" value="{{ project_name }}" placeholder="">
+                </div>
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.award_collection') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
+                </div>
+            </div>
+        </form>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if projects_with_info %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1400px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">开放状态</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">已上传奖项</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in projects_with_info %}
+                    {% set project = item.project %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.title }}">
+                            <a href="{{ url_for('school_admin.review_project', project_id=project.id) }}" style="color: var(--primary-color); text-decoration: none;">{{ project.title }}</a>
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.competition.name }}">{{ project.competition.name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.real_name }}">{{ project.team.leader.real_name }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ project.team.leader.college }}">{{ project.team.leader.college }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if project.allow_award_collection %}
+                                <span class="badge badge-success">已开放</span>
+                            {% else %}
+                                <span class="badge badge-warning">未开放</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if item.has_external_awards %}
+                                {% for ext_award in item.external_awards %}
+                                    <div style="margin-bottom: 4px;">
+                                        <span class="badge badge-info">{{ ext_award.award_level }}-{{ ext_award.award_name }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span style="color: var(--text-secondary);">暂无</span>
+                            {% endif %}
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                                {% if item.has_external_awards %}
+                                <a href="javascript:void(0);" onclick="showAwardDetails({{ project.id }})" class="btn btn-sm btn-secondary" style="white-space: nowrap;">查看详情</a>
+                                {% endif %}
+                                <form method="POST" action="{{ url_for('school_admin.toggle_award_collection', project_id=project.id) }}" style="display: inline-block;" onsubmit="return confirm('确定要{% if project.allow_award_collection %}关闭{% else %}开放{% endif %}该项目的奖项收集功能吗？');">
+                                    <button type="submit" class="btn btn-sm {% if project.allow_award_collection %}btn-warning{% else %}btn-primary{% endif %}" style="white-space: nowrap;">
+                                        {% if project.allow_award_collection %}关闭上传{% else %}开放上传{% endif %}
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>没有找到符合条件的项目</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                请调整筛选条件或等待项目通过学校审核
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 奖状详情模态框 -->
+<div id="awardDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 2000; overflow-y: auto;">
+    <div style="position: relative; max-width: 800px; margin: 50px auto; background: white; border-radius: var(--radius-sm); padding: var(--spacing-lg); box-shadow: var(--shadow-lg);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+            <h2 style="margin: 0;">省赛/国赛奖状详情</h2>
+            <button onclick="closeAwardDetails()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        <div id="awardDetailsContent">
+            <!-- 内容将通过JavaScript动态加载 -->
+        </div>
+    </div>
+</div>
+
+<script>
+// 存储所有项目的奖状信息
+const awardData = {
+    {% for item in projects_with_info %}
+    {{ item.project.id }}: [
+        {% for ext_award in item.external_awards %}
+        {
+            id: {{ ext_award.id }},
+            award_level: "{{ ext_award.award_level }}",
+            award_name: "{{ ext_award.award_name }}",
+            certificate_file: "{{ ext_award.certificate_file }}",
+            description: {{ (ext_award.description or '')|tojson }},
+            created_at: "{{ ext_award.created_at.strftime('%Y-%m-%d %H:%M') if ext_award.created_at else '未知' }}",
+            uploaded_by: "{{ ext_award.uploader.real_name if ext_award.uploader else '未知' }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+function showAwardDetails(projectId) {
+    const awards = awardData[projectId] || [];
+    const modal = document.getElementById('awardDetailsModal');
+    const content = document.getElementById('awardDetailsContent');
+    
+    if (awards.length === 0) {
+        content.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">该项目暂无上传的省赛/国赛奖状</p>';
+    } else {
+        let html = '<div style="display: flex; flex-direction: column; gap: var(--spacing-md);">';
+        awards.forEach(function(award) {
+            html += `
+                <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid var(--primary-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-sm);">
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 var(--spacing-xs) 0; font-size: 1.1em; color: var(--primary-color);">
+                                ${award.award_level} - ${award.award_name}
+                            </h3>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+                                上传时间：${award.created_at} | 上传人：${award.uploaded_by}
+                            </p>
+                        </div>
+                    </div>
+                    ${award.description ? `<div style="margin-top: var(--spacing-sm); padding: var(--spacing-sm); background: var(--surface-color); border-radius: var(--radius-xs);"><strong>说明：</strong>${award.description}</div>` : ''}
+                    ${award.certificate_file ? `
+                        <div style="margin-top: var(--spacing-sm); display: flex; gap: var(--spacing-xs);">
+                            <a href="/uploads/${award.certificate_file.replace(/\\\\/g, '/')}" class="btn btn-sm btn-primary" target="_blank">查看奖状</a>
+                            <a href="/uploads/${award.certificate_file.replace(/\\\\/g, '/')}?download=true" class="btn btn-sm btn-secondary">下载奖状</a>
+                        </div>
+                    ` : '<p style="margin-top: var(--spacing-sm); color: var(--text-secondary); font-size: 0.875rem;">未上传奖状文件</p>'}
+                </div>
+            `;
+        });
+        html += '</div>';
+        content.innerHTML = html;
+    }
+    
+    modal.style.display = 'block';
+}
+
+function closeAwardDetails() {
+    document.getElementById('awardDetailsModal').style.display = 'none';
+}
+
+// 点击模态框外部关闭
+document.getElementById('awardDetailsModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAwardDetails();
+    }
+});
+</script>
+{% endblock %}
+

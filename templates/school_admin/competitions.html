@@ -8,10 +8,24 @@
     <a href="{{ url_for('school_admin.create_competition') }}" class="btn btn-primary">创建新竞赛</a>
 </div>
 
+<div class="card" style="padding: 4px; display: flex; align-items: center; margin-bottom: var(--spacing-lg);">
+    <form method="GET" action="{{ url_for('school_admin.competitions') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="search_name" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <input type="text" id="search_name" name="search_name" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 200px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('search_name', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.competitions') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
+                </div>
+        </div>
+    </form>
+</div>
+
 <div class="card">
-    <div class="card-header">
-        <h2>竞赛列表</h2>
-    </div>
     <div class="card-body">
         {% if competitions %}
         <div class="table-container" style="overflow-x: auto;">
@@ -23,9 +37,9 @@
                         <th style="padding: 10px; text-align: center; min-width: 80px;">年份</th>
                         <th style="padding: 10px; text-align: center; min-width: 200px;">竞赛类型</th>
                         <th style="padding: 10px; text-align: center; min-width: 120px;">描述</th>
-                        <th style="padding: 10px; text-align: center; min-width: 140px;">注册开始时间</th>
-                        <th style="padding: 10px; text-align: center; min-width: 140px;">注册结束时间</th>
-                        <th style="padding: 10px; text-align: center; min-width: 100px;">发布状态</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">报名开始时间</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">报名结束时间</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">是否发布</th>
                         <th style="padding: 10px; text-align: center; min-width: 120px;">操作</th>
                     </tr>
                 </thead>
@@ -40,16 +54,20 @@
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ competition.registration_start.strftime('%Y-%m-%d %H:%M') if competition.registration_start else '-' }}</td>
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ competition.registration_end.strftime('%Y-%m-%d %H:%M') if competition.registration_end else '-' }}</td>
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">
-                            {% if competition.is_published %}
-                                <span class="badge badge-success">已发布</span>
-                            {% else %}
-                                <span class="badge badge-warning">未发布</span>
-                            {% endif %}
+                            <label class="toggle-switch" title="{% if competition.is_published %}已发布{% else %}未发布{% endif %}">
+                                <input type="checkbox" 
+                                       class="toggle-input" 
+                                       data-competition-id="{{ competition.id }}"
+                                       {% if competition.is_published %}checked{% endif %}
+                                       aria-label="是否发布"
+                                       onchange="togglePublish({{ competition.id }}, this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
                         </td>
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">
                             <div style="display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; justify-content: center;">
                                 <a href="{{ url_for('school_admin.edit_competition', competition_id=competition.id) }}" class="btn btn-sm btn-secondary" style="white-space: nowrap;">编辑</a>
-                                <form method="POST" action="{{ url_for('school_admin.delete_competition', competition_id=competition.id) }}" style="display: inline;" onsubmit="return confirm('确定要删除竞赛\"{{ competition.name }}\"吗？此操作不可恢复！');">
+                                <form method="POST" action="{{ url_for('school_admin.delete_competition', competition_id=competition.id) }}" style="display: inline;" onsubmit="return confirm('确定要删除竞赛「{{ competition.name }}」吗？此操作不可恢复！');">
                                     <button type="submit" class="btn btn-sm btn-danger" style="white-space: nowrap;">删除</button>
                                 </form>
                             </div>
@@ -66,5 +84,43 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePublish(competitionId, isPublished) {
+    const url = '{{ url_for("school_admin.toggle_publish_competition", competition_id=0) }}'.replace('0', competitionId);
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 成功，状态已经更新
+            console.log(data.message);
+        } else {
+            // 如果失败，恢复checkbox状态
+            const checkbox = document.querySelector('input[data-competition-id="' + competitionId + '"]');
+            if (checkbox) {
+                checkbox.checked = !isPublished;
+            }
+            alert('操作失败，请重试');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // 如果失败，恢复checkbox状态
+        const checkbox = document.querySelector('input[data-competition-id="' + competitionId + '"]');
+        if (checkbox) {
+            checkbox.checked = !isPublished;
+        }
+        alert('操作失败，请重试');
+    });
+}
+</script>
 {% endblock %}
 

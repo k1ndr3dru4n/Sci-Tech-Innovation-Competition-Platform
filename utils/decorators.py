@@ -2,9 +2,13 @@
 权限装饰器
 """
 from functools import wraps
-from flask import abort, current_app, redirect, url_for, flash
+from flask import abort, current_app, redirect, url_for, flash, session
 from flask_login import current_user
 from models import UserRole
+
+def get_current_role():
+    """获取当前session中的角色，如果没有则使用用户主角色"""
+    return session.get('current_role', current_user.role if current_user.is_authenticated else None)
 
 def role_required(*roles):
     """要求特定角色的装饰器"""
@@ -13,7 +17,8 @@ def role_required(*roles):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 abort(401)
-            if current_user.role not in roles:
+            current_role = get_current_role()
+            if current_role not in roles:
                 abort(403)
             return f(*args, **kwargs)
         return decorated_function
@@ -29,12 +34,13 @@ def college_admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)
-        if current_user.role != UserRole.COLLEGE_ADMIN:
+        current_role = get_current_role()
+        if current_role != UserRole.COLLEGE_ADMIN:
             abort(403)
         # 确保学院管理员已设置学院
         if not current_user.college:
             flash('您的账户未设置所属学院，请先完善个人资料', 'error')
-            return redirect(url_for('profile.profile'))
+            return redirect(url_for('college_admin.dashboard'))
         return f(*args, **kwargs)
     return decorated_function
 

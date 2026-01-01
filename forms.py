@@ -16,7 +16,7 @@ class LoginForm(FlaskForm):
 
 class JudgeLoginForm(FlaskForm):
     """校外专家登录表单"""
-    username = StringField('用户名或邮箱', validators=[DataRequired(), Length(min=4, max=120)])
+    username = StringField('用户名', validators=[DataRequired(), Length(min=4, max=120)])
     password = PasswordField('密码', validators=[DataRequired()])
     remember_me = BooleanField('记住我')
 
@@ -130,8 +130,78 @@ class CompetitionForm(FlaskForm):
     year = IntegerField('年份', validators=[DataRequired()], default=datetime.now().year)
     competition_type = SelectField('竞赛类型', validators=[DataRequired()], choices=COMPETITION_TYPES, description='用于匹配对应的报名流程')
     description = TextAreaField('描述', validators=[Optional()])
-    registration_start = DateTimeLocalField('注册开始时间', validators=[Optional()], format='%Y-%m-%dT%H:%M')
-    registration_end = DateTimeLocalField('注册结束时间', validators=[Optional()], format='%Y-%m-%dT%H:%M')
-    final_quota = IntegerField('决赛名额', validators=[Optional()], render_kw={'placeholder': '排名前几可以进入决赛', 'min': 1})
-    is_published = BooleanField('立即发布', validators=[Optional()], default=False)
+    registration_start = DateTimeLocalField('报名开始时间', validators=[Optional()], format='%Y-%m-%dT%H:%M')
+    registration_end = DateTimeLocalField('报名结束时间', validators=[Optional()], format='%Y-%m-%dT%H:%M')
 
+class QQGroupForm(FlaskForm):
+    """QQ群管理表单"""
+    competition_id = SelectField('竞赛', validators=[DataRequired()], coerce=int)
+    qq_group_number = StringField('QQ群号', validators=[Optional(), Length(max=50)])
+    qq_group_qrcode = FileField('QQ群二维码', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif'], '只允许上传图片文件（jpg, png, gif）')])
+
+class UserEditForm(FlaskForm):
+    """用户编辑表单（校级管理员使用）"""
+    real_name = StringField('真实姓名', validators=[DataRequired(), Length(max=80)])
+    work_id = StringField('学工号', validators=[Optional(), Length(max=20)])
+    username = StringField('用户名', validators=[Optional(), Length(min=4, max=80)])
+    email = StringField('邮箱', validators=[Optional(), Email()])
+    college = SelectField('学院', validators=[Optional()], choices=[('', '请选择')] + [(college, college) for college in COLLEGES])
+    unit = StringField('单位', validators=[Optional(), Length(max=100)])
+    contact_info = StringField('联系方式', validators=[Optional(), Length(max=20)])
+    role = SelectField('角色', validators=[DataRequired()], choices=[
+        ('student', '学生'),
+        ('college_admin', '学院管理员'),
+        ('school_admin', '校级管理员'),
+        ('judge', '校外评委')
+    ])
+    is_active = BooleanField('账户状态', validators=[Optional()], default=True)
+    new_password = PasswordField('新密码（留空不修改）', validators=[Optional(), Length(min=6)])
+
+class UserCreateForm(FlaskForm):
+    """用户创建表单（校级管理员使用）"""
+    real_name = StringField('真实姓名', validators=[DataRequired(), Length(max=80)])
+    work_id = StringField('学工号', validators=[Optional(), Length(max=20)])
+    username = StringField('用户名', validators=[Optional(), Length(min=4, max=80)])
+    email = StringField('邮箱', validators=[Optional(), Email()])
+    college = SelectField('学院', validators=[Optional()], choices=[('', '请选择')] + [(college, college) for college in COLLEGES])
+    unit = StringField('单位', validators=[Optional(), Length(max=100)])
+    contact_info = StringField('联系方式', validators=[Optional(), Length(max=20)])
+    role = SelectField('角色', validators=[DataRequired()], choices=[
+        ('student', '学生'),
+        ('college_admin', '学院管理员'),
+        ('school_admin', '校级管理员'),
+        ('judge', '校外评委')
+    ])
+    password = PasswordField('密码', validators=[DataRequired(), Length(min=6)])
+    password2 = PasswordField('确认密码', validators=[DataRequired(), EqualTo('password', message='两次密码输入不一致')])
+    is_active = BooleanField('账户状态', validators=[Optional()], default=True)
+
+class DefenseOrderTimeForm(FlaskForm):
+    """答辩顺序抽取时间设置表单"""
+    competition_id = SelectField('竞赛', validators=[DataRequired()], coerce=int)
+    defense_order_start = DateTimeLocalField('答辩顺序抽取开始时间', validators=[Optional()], format='%Y-%m-%dT%H:%M')
+    defense_order_end = DateTimeLocalField('答辩顺序抽取结束时间', validators=[Optional()], format='%Y-%m-%dT%H:%M')
+
+class FinalQuotaForm(FlaskForm):
+    """决赛名额设置表单"""
+    competition_id = SelectField('竞赛', validators=[DataRequired()], coerce=int)
+    final_quota = IntegerField('决赛名额', validators=[Optional()], render_kw={'placeholder': '排名前几可以进入决赛', 'min': 1})
+
+class ExternalAwardForm(FlaskForm):
+    """省赛/国赛奖状上传表单（学生使用）"""
+    award_level = SelectField('奖项级别', validators=[DataRequired()], choices=[
+        ('', '请选择'),
+        ('省赛', '省赛'),
+        ('国赛', '国赛')
+    ])
+    award_name = StringField('奖项名称', validators=[DataRequired(), Length(max=100)], render_kw={'placeholder': '如：一等奖、二等奖、三等奖'})
+    certificate_file = FileField('奖状文件', validators=[Optional(), FileAllowed(['pdf', 'jpg', 'jpeg', 'png'], '只允许上传PDF或图片文件')])
+    description = TextAreaField('其他说明', validators=[Optional()], render_kw={'rows': 3, 'placeholder': '可填写其他相关信息'})
+
+class AssessmentConfigForm(FlaskForm):
+    """考核配置表单（统一设置）"""
+    red_travel_requirement = IntegerField('红旅参与任务要求', validators=[Optional()], render_kw={'placeholder': '请输入任务要求数', 'min': 0})
+    challenge_cup_requirement = IntegerField('挑战杯参与任务要求', validators=[Optional()], render_kw={'placeholder': '请输入任务要求数', 'min': 0})
+    challenge_cup_activities = TextAreaField('挑战杯配套活动', validators=[Optional()], render_kw={'rows': 5, 'placeholder': '请输入配套活动信息（JSON格式或文本）'})
+    challenge_cup_special_notes = TextAreaField('挑战杯特殊情况备注', validators=[Optional()], render_kw={'rows': 3, 'placeholder': '请输入特殊情况备注'})
+    red_travel_special_notes = TextAreaField('红旅特殊情况备注', validators=[Optional()], render_kw={'rows': 3, 'placeholder': '请输入特殊情况备注'})

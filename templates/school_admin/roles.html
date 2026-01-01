@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}角色管理 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>角色管理</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.users') }}" class="tab-nav-item">用户管理</a>
+    <a href="{{ url_for('school_admin.roles') }}" class="tab-nav-item active">角色管理</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center;">
+    <form method="GET" action="{{ url_for('school_admin.roles') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="user_name" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">姓名:</label>
+                    <input type="text" id="user_name" name="user_name" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 100px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('user_name', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="work_id" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">学工号:</label>
+                    <input type="text" id="work_id" name="work_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 100px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('work_id', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="role" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">角色:</label>
+                    <select id="role" name="role" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 120px; height: 22px; line-height: 20px;">
+                        <option value="">全部</option>
+                        <option value="student" {% if request.args.get('role') == 'student' %}selected{% endif %}>学生</option>
+                        <option value="college_admin" {% if request.args.get('role') == 'college_admin' %}selected{% endif %}>学院管理员</option>
+                        <option value="school_admin" {% if request.args.get('role') == 'school_admin' %}selected{% endif %}>校级管理员</option>
+                        <option value="judge" {% if request.args.get('role') == 'judge' %}selected{% endif %}>校外评委</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="college" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">学院:</label>
+                    <input type="text" id="college" name="college" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 100px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('college', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.roles') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
+                </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    {% if users %}
+    <div class="table-container" style="overflow-x: auto; overflow-y: visible;">
+        <table style="width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">学工号/用户名</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">姓名</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">主角色</th>
+                    <th style="padding: 10px; text-align: center; min-width: 200px;">额外角色</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">学院/单位</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">联系方式</th>
+                    <th style="padding: 10px; text-align: center; min-width: 150px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {{ user.work_id or user.username or '未设置' }}
+                    </td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ user.real_name }}">{{ user.real_name }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if user.role == 'student' %}
+                            <span class="badge badge-info">学生</span>
+                        {% elif user.role == 'college_admin' %}
+                            <span class="badge badge-warning">学院管理员</span>
+                        {% elif user.role == 'school_admin' %}
+                            <span class="badge badge-success">校级管理员</span>
+                        {% elif user.role == 'judge' %}
+                            <span class="badge badge-judge">校外评委</span>
+                        {% else %}
+                            <span class="badge">{{ user.role }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% set additional_roles = user.additional_roles.all() %}
+                        {% if additional_roles %}
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; justify-content: center;">
+                                {% for ur in additional_roles %}
+                                    {% if ur.role == 'student' %}
+                                        <span class="badge badge-info">学生</span>
+                                    {% elif ur.role == 'college_admin' %}
+                                        <span class="badge badge-warning">学院管理员</span>
+                                    {% elif ur.role == 'school_admin' %}
+                                        <span class="badge badge-success">校级管理员</span>
+                                    {% elif ur.role == 'judge' %}
+                                        <span class="badge badge-judge">校外评委</span>
+                                    {% else %}
+                                        <span class="badge">{{ ur.role }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span style="color: var(--text-secondary);">无</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ user.college or user.unit or '未设置' }}">
+                        {{ user.college or user.unit or '未设置' }}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ user.contact_info or '未设置' }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        <a href="{{ url_for('school_admin.manage_user_roles', user_id=user.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">管理角色</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>当前没有找到符合条件的用户</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

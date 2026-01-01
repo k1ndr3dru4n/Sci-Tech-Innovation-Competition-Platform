@@ -1,9 +1,11 @@
 """
 数据库初始化脚本
-创建初始数据：竞赛、赛道、测试账户等
+创建初始数据：测试账户（角色）
+注意：不创建竞赛数据，竞赛由管理员通过界面创建
 """
 from app import app
-from models import db, User, UserRole, COLLEGES
+from models import db, User, UserRole, UserRoleAssignment, COLLEGES
+from utils.timezone import beijing_now
 
 def init_database():
     """初始化数据库"""
@@ -11,7 +13,8 @@ def init_database():
         # 创建所有表
         db.create_all()
         
-        # 竞赛由管理员通过界面创建，不再自动创建示例竞赛
+        # 只创建测试账户（角色），不创建竞赛数据
+        # 竞赛由校级管理员通过界面创建和管理
         
         # 创建测试账户（如果不存在则创建）
         # 1. 学生账户（使用学工号登录）
@@ -108,6 +111,7 @@ def init_database():
         print('   学工号: 2023115871')
         print('   密码: swjtu12345')
         print('   角色: 学生')
+        print('   所属学院: 利兹学院')
         print('')
         print('2. 学院管理员账户')
         print('   学工号: T2023115871')
@@ -119,6 +123,7 @@ def init_database():
         print('   学工号: A2023115871')
         print('   密码: swjtu12345')
         print('   角色: 校级管理员')
+        print('   单位: 教务处')
         print('')
         print('【校外专家（使用用户名/邮箱登录）】')
         print('4. 校外专家账户')
@@ -126,12 +131,23 @@ def init_database():
         print('   邮箱: judge@example.com')
         print('   密码: swjtu12345')
         print('   角色: 校外专家')
+        print('   单位: 外部评审机构')
         print('=' * 50)
-        print('提示：')
+        print('系统功能说明：')
+        print('- 支持多角色系统：用户可以通过校级管理员分配多个角色')
+        print('- 时区设置：系统使用北京时间（UTC+8）')
+        print('- 竞赛管理：竞赛由校级管理员通过界面创建和管理')
+        print('- 项目审核：支持学院和学校两级审核流程')
+        print('- 专家评审：支持校外专家对项目进行评分和建议')
+        print('- 答辩抽签：支持学生自主抽取答辩顺序')
+        print('- 奖项管理：支持设置项目奖项并自动生成证书')
+        print('=' * 50)
+        print('登录提示：')
         print('- 所有账户初始密码统一为: swjtu12345')
         print('- 校内用户请访问 /auth/login 使用学工号登录')
         print('- 校外专家请访问 /auth/judge/login 使用用户名或邮箱登录')
         print('- 系统已禁用注册功能，账户由管理员统一管理')
+        print('- 首次登录后，系统会记录最后登录时间')
         print('=' * 50)
 
 if __name__ == '__main__':

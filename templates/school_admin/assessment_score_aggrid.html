@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}年度考核分数统计 - 校级管理员{% endblock %}
+
+{% block extra_css %}
+<!-- AG Grid Community CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/styles/ag-theme-alpine.css">
+<style>
+    .ag-theme-alpine {
+        --ag-header-height: 60px;
+        --ag-header-foreground-color: #1e293b;
+        --ag-header-background-color: #f1f5f9;
+        --ag-border-color: #e2e8f0;
+        font-size: 0.75rem;
+    }
+    
+    .assessment-grid-container {
+        height: 600px;
+        width: 100%;
+    }
+    
+    /* 确保 AG Grid 可以横向滚动 */
+    .ag-theme-alpine {
+        --ag-scrollbar-size: 10px;
+    }
+    
+    /* 自定义单元格编辑器样式 */
+    .ag-cell-editor {
+        padding: 2px;
+    }
+    
+    .ag-cell-editor input {
+        width: 100%;
+        padding: 2px 4px;
+        border: 1px solid #ddd;
+        border-radius: 2px;
+        font-size: 0.75rem;
+        box-sizing: border-box;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>考核模块</h1>
+    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+        <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+            <label for="year_select" style="margin: 0; white-space: nowrap;">年度：</label>
+            <select id="year_select" onchange="window.location.href='{{ url_for('school_admin.assessment_score_aggrid') }}?year=' + this.value" style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-xs);">
+                {% for year in available_years %}
+                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="{{ url_for('school_admin.export_assessment', year=selected_year) }}" class="btn btn-primary">
+            导出Excel
+        </a>
+    </div>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.assessment') }}" class="tab-nav-item">科创竞赛参与与获奖数据</a>
+    <a href="{{ url_for('school_admin.assessment_score_aggrid') }}" class="tab-nav-item active" style="color: #007bff; font-weight: bold;">年度考核分数统计</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>年度考核分数统计</h2>
+    </div>
+    <div class="card-body">
+        <div id="scoreGrid" class="ag-theme-alpine assessment-grid-container"></div>
+        
+        <div style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+            <h4 style="margin-bottom: var(--spacing-sm);">计分规则说明</h4>
+            <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--text-secondary); line-height: 1.8;">
+                <li><strong>7.1 红旅参与（2分）：</strong>根据实际申报队伍数与任务要求对比计分</li>
+                <li><strong>7.2 红旅获奖（3分）：</strong>按获奖等级赋分，同一项目取最高奖项。校三0.3分，校二0.6分，校一1分，省三1分，省二2分，省一3分</li>
+                <li><strong>7.3 挑战杯等参与（2分）：</strong>根据挑战杯系列赛事报名数量计分</li>
+                <li><strong>7.4 挑战杯等获奖（3分）：</strong>按获奖等级赋分，同一项目取最高奖项。校三0.3分，校二0.6分，校一1分，省三1分，省二2分，省一3分</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- AG Grid Community JS -->
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.0.3/dist/ag-grid-community.min.js"></script>
+<script>
+// 保存分数函数
+function saveScore(fieldType, college, value, year) {
+    const url = '{{ url_for("school_admin.save_assessment_score") }}';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            year: year,
+            college: college,
+            field_type: fieldType,
+            value: value
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('保存成功:', fieldType, value);
+        } else {
+            console.error('保存失败:', data.message);
+            alert('保存失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('保存错误:', error);
+        alert('保存错误: ' + error.message);
+    });
+}
+
+// 准备表格数据
+const gridData = [
+    {% for college in colleges %}
+    {% set score_data = college_scores.get(college, {}) %}
+    {% set details = score_data.get('score_details', {}) %}
+    {
+        index: {{ loop.index }},
+        college: "{{ college }}",
+        redTravelParticipationScore: {{ details.get('red_travel_participation', {}).get('score') if details.get('red_travel_participation', {}).get('score') is not none else 0 }},
+        redTravelParticipationNote: "{{ details.get('red_travel_participation', {}).get('note', '')|replace('"', '\\"') }}",
+        redTravelAwardScore: {{ details.get('red_travel_award', {}).get('score', 0) }},
+        redTravelAwardNote: "{{ details.get('red_travel_award', {}).get('note', '')|replace('"', '\\"') }}",
+        challengeCupParticipationScore: {{ details.get('challenge_cup_participation', {}).get('score') if details.get('challenge_cup_participation', {}).get('score') is not none else 0 }},
+        challengeCupParticipationNote: "{{ details.get('challenge_cup_participation', {}).get('note', '')|replace('"', '\\"') }}",
+        challengeCupAwardScore: {{ details.get('challenge_cup_award', {}).get('score', 0) }},
+        challengeCupAwardNote: "{{ details.get('challenge_cup_award', {}).get('note', '')|replace('"', '\\"') }}",
+        totalScore: {{ score_data.get('total_score', 0) }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// 列定义
+const columnDefs = [
+    {
+        headerName: '序号',
+        field: 'index',
+        pinned: 'left',
+        width: 80,
+        editable: false,
+        lockPosition: true,
+        cellStyle: { fontWeight: 'bold', textAlign: 'center' }
+    },
+    {
+        headerName: '学院',
+        field: 'college',
+        pinned: 'left',
+        width: 200,
+        editable: false,
+        lockPosition: true,
+        cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+    },
+    {
+        headerName: '7.1 红旅参与（2分）',
+        children: [
+            {
+                headerName: '得分',
+                field: 'redTravelParticipationScore',
+                width: 100,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0, step: 0.1 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseFloat(params.newValue);
+                },
+                cellRenderer: function(params) {
+                    if (params.value === null || params.value === undefined) {
+                        return '-';
+                    }
+                    return params.value.toFixed(1);
+                },
+                onCellValueChanged: function(params) {
+                    saveScore('red_travel_participation_score', params.data.college, params.newValue, {{ selected_year }});
+                }
+            },
+            {
+                headerName: '计分说明',
+                field: 'redTravelParticipationNote',
+                width: 250,
+                editable: false,
+                cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+            }
+        ]
+    },
+    {
+        headerName: '7.2 红旅获奖（3分）',
+        children: [
+            {
+                headerName: '得分',
+                field: 'redTravelAwardScore',
+                width: 100,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0, step: 0.1 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseFloat(params.newValue);
+                },
+                cellRenderer: function(params) {
+                    return params.value.toFixed(1);
+                },
+                onCellValueChanged: function(params) {
+                    saveScore('red_travel_award_score', params.data.college, params.newValue, {{ selected_year }});
+                    // 重新计算总分
+                    updateTotalScore(params);
+                }
+            },
+            {
+                headerName: '计分说明',
+                field: 'redTravelAwardNote',
+                width: 250,
+                editable: false,
+                cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+            }
+        ]
+    },
+    {
+        headerName: '7.3 挑战杯等参与（2分）',
+        children: [
+            {
+                headerName: '得分',
+                field: 'challengeCupParticipationScore',
+                width: 100,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0, step: 0.1 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseFloat(params.newValue);
+                },
+                cellRenderer: function(params) {
+                    if (params.value === null || params.value === undefined) {
+                        return '-';
+                    }
+                    return params.value.toFixed(1);
+                },
+                onCellValueChanged: function(params) {
+                    saveScore('challenge_cup_participation_score', params.data.college, params.newValue, {{ selected_year }});
+                }
+            },
+            {
+                headerName: '计分说明',
+                field: 'challengeCupParticipationNote',
+                width: 250,
+                editable: false,
+                cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+            }
+        ]
+    },
+    {
+        headerName: '7.4 挑战杯等获奖（3分）',
+        children: [
+            {
+                headerName: '得分',
+                field: 'challengeCupAwardScore',
+                width: 100,
+                editable: true,
+                cellEditor: 'agNumberCellEditor',
+                cellEditorParams: { min: 0, step: 0.1 },
+                valueParser: function(params) {
+                    return params.newValue === '' || params.newValue === null || params.newValue === undefined ? null : parseFloat(params.newValue);
+                },
+                cellRenderer: function(params) {
+                    return params.value.toFixed(1);
+                },
+                onCellValueChanged: function(params) {
+                    saveScore('challenge_cup_award_score', params.data.college, params.newValue, {{ selected_year }});
+                    // 重新计算总分
+                    updateTotalScore(params);
+                }
+            },
+            {
+                headerName: '计分说明',
+                field: 'challengeCupAwardNote',
+                width: 250,
+                editable: false,
+                cellStyle: { textAlign: 'left', whiteSpace: 'normal', wordWrap: 'break-word' }
+            }
+        ]
+    },
+    {
+        headerName: '总分',
+        field: 'totalScore',
+        width: 120,
+        editable: false,
+        cellStyle: { fontWeight: 'bold', fontSize: '1.1em', color: '#007bff', textAlign: 'center' },
+        cellRenderer: function(params) {
+            return params.value.toFixed(1);
+        },
+        valueGetter: function(params) {
+            // 动态计算总分
+            let total = 0;
+            if (params.data.redTravelParticipationScore !== null && params.data.redTravelParticipationScore !== undefined) {
+                total += params.data.redTravelParticipationScore;
+            }
+            total += params.data.redTravelAwardScore || 0;
+            if (params.data.challengeCupParticipationScore !== null && params.data.challengeCupParticipationScore !== undefined) {
+                total += params.data.challengeCupParticipationScore;
+            }
+            total += params.data.challengeCupAwardScore || 0;
+            return total;
+        }
+    }
+];
+
+// 更新总分（在网格初始化后使用）
+let gridApi = null;
+function updateTotalScore(params) {
+    if (!gridApi) return;
+    const rowData = params.data;
+    let total = 0;
+    if (rowData.redTravelParticipationScore !== null && rowData.redTravelParticipationScore !== undefined) {
+        total += rowData.redTravelParticipationScore;
+    }
+    total += rowData.redTravelAwardScore || 0;
+    if (rowData.challengeCupParticipationScore !== null && rowData.challengeCupParticipationScore !== undefined) {
+        total += rowData.challengeCupParticipationScore;
+    }
+    total += rowData.challengeCupAwardScore || 0;
+    rowData.totalScore = total;
+    // 刷新总分列
+    gridApi.refreshCells({ 
+        rowNodes: [params.node], 
+        columns: ['totalScore'],
+        force: true 
+    });
+}
+
+// 网格选项
+const gridOptions = {
+    columnDefs: columnDefs,
+    rowData: gridData,
+    defaultColDef: {
+        sortable: true,
+        resizable: true,
+        filter: false,
+        editable: false  // 默认不可编辑，需要在列定义中明确指定
+    },
+    suppressRowClickSelection: true,
+    animateRows: true,
+    rowHeight: 40,
+    headerHeight: 60,
+    pinnedRowCount: 0,
+    enableCellChangeFlash: true,
+    singleClickEdit: true,  // 单击即可编辑
+    stopEditingWhenCellsLoseFocus: true,  // 失去焦点时停止编辑
+    suppressHorizontalScroll: false,  // 启用横向滚动
+    suppressSizeToFit: true  // 禁用自动调整列宽，保持固定宽度
+};
+
+// 初始化网格
+document.addEventListener('DOMContentLoaded', function() {
+    const gridDiv = document.querySelector('#scoreGrid');
+    gridApi = new agGrid.Grid(gridDiv, gridOptions);
+    gridOptions.api = gridApi.api;
+});
+</script>
+{% endblock %}
+

@@ -9,12 +9,83 @@ from utils.decorators import judge_required
 
 judge_bp = Blueprint('judge', __name__)
 
-@judge_bp.route('/dashboard')
+@judge_bp.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 @judge_required
 def dashboard():
-    """评委首页（显示基本信息）"""
-    return render_template('judge/dashboard.html')
+    """评委首页 - 显示基本信息和编辑表单"""
+    from forms import ProfileForm
+    from models import User
+    
+    form = ProfileForm()
+    
+    if form.validate_on_submit():
+        has_errors = False
+        
+        # 更新基本信息
+        current_user.real_name = form.real_name.data
+        # 邮箱为选填项，如果填写了则验证并更新
+        email_input = form.email.data.strip() if form.email.data else ''
+        # 如果邮箱值等于用户名，说明是浏览器自动填充的，忽略它
+        if email_input and email_input == current_user.username:
+            email_input = ''
+        if email_input:
+            # 检查邮箱是否被其他用户使用
+            existing_user = User.query.filter(
+                User.email == email_input,
+                User.id != current_user.id
+            ).first()
+            if existing_user:
+                flash('该邮箱已被其他用户使用', 'error')
+                has_errors = True
+            else:
+                current_user.email = email_input
+        else:
+            # 如果用户没有填写邮箱，保持原值不变
+            pass
+        
+        # 更新单位
+        if form.unit.data:
+            current_user.unit = form.unit.data.strip() if form.unit.data else None
+        
+        # 更新联系方式
+        current_user.contact_info = form.contact_info.data
+        
+        # 如果提供了新密码，验证旧密码并更新
+        if form.new_password.data:
+            if not form.old_password.data:
+                flash('请输入当前密码', 'error')
+                has_errors = True
+            elif not current_user.check_password(form.old_password.data):
+                flash('当前密码错误', 'error')
+                has_errors = True
+            elif form.new_password.data != form.confirm_password.data:
+                flash('两次新密码输入不一致', 'error')
+                has_errors = True
+            else:
+                current_user.set_password(form.new_password.data)
+        
+        if has_errors:
+            # 如果有错误，重新填充表单数据并渲染模板
+            form.real_name.data = current_user.real_name
+            form.email.data = ''
+            if current_user.role in ['school_admin', 'judge']:
+                form.unit.data = current_user.unit
+            form.contact_info.data = current_user.contact_info
+            return render_template('judge/dashboard.html', form=form)
+        
+        db.session.commit()
+        flash('个人资料更新成功', 'success')
+        return redirect(url_for('judge.dashboard'))
+    
+    # 填充表单数据（GET 请求或验证失败时）
+    form.real_name.data = current_user.real_name
+    form.email.data = ''  # 邮箱不默认填写
+    if current_user.role in ['school_admin', 'judge']:
+        form.unit.data = current_user.unit
+    form.contact_info.data = current_user.contact_info
+    
+    return render_template('judge/dashboard.html', form=form)
 
 @judge_bp.route('/projects')
 @login_required

@@ -7,9 +7,12 @@
     <!-- 个人信息卡片 -->
     <div class="profile-card">
         <div class="profile-details">
-            <div class="detail-section">
-                <h2 class="profile-title">{{ current_user.real_name }}</h2>
-                <p class="profile-subtitle">学院管理员</p>
+            <div class="detail-section" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 class="profile-title">{{ current_user.real_name }}</h2>
+                    <p class="profile-subtitle">学院管理员</p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="toggleEditForm()" id="edit-btn">{% if form.errors %}取消编辑{% else %}编辑个人信息{% endif %}</button>
             </div>
             
             <div class="detail-section">
@@ -63,6 +66,161 @@
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
 
+    <!-- 编辑个人信息表单 -->
+    <div class="card" id="edit-form-card" style="display: {% if form.errors %}block{% else %}none{% endif %};">
+        <div class="card-header">
+            <h2>编辑个人信息</h2>
+        </div>
+        
+        <form method="POST" action="{{ url_for('college_admin.dashboard') }}" class="auth-form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                <label class="form-label">学工号/用户名</label>
+                <input type="text" class="form-control" value="{{ current_user.work_id or current_user.username }}" disabled>
+                <small class="form-text">学工号/用户名不可修改</small>
+            </div>
+
+            <div class="form-group">
+                {{ form.real_name.label(class="form-label") }}
+                {{ form.real_name(class="form-control", required=True, aria_required="true") }}
+                {% if form.real_name.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.real_name.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                <!-- 隐藏的假邮箱字段，用于欺骗浏览器自动填充 -->
+                <input type="email" name="fake_email" id="fake_email" autocomplete="email" style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;" tabindex="-1" aria-hidden="true">
+                <!-- 真实的邮箱输入字段 -->
+                <input type="text" name="email" id="email" class="form-control" autocomplete="off" placeholder="请输入邮箱" value="" data-work-id="{{ current_user.work_id or '' }}" readonly onfocus="this.removeAttribute('readonly');">
+                {% if form.email.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.email.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <script>
+                (function() {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var emailInput = document.getElementById('email');
+                        var fakeEmailInput = document.getElementById('fake_email');
+                        
+                        if (emailInput) {
+                            emailInput.value = '';
+                            
+                            var form = emailInput.closest('form');
+                            if (form) {
+                                form.addEventListener('submit', function(e) {
+                                    var workId = emailInput.getAttribute('data-work-id');
+                                    if (workId && emailInput.value === workId) {
+                                        emailInput.value = '';
+                                    }
+                                });
+                            }
+                        }
+                        
+                        if (fakeEmailInput) {
+                            fakeEmailInput.addEventListener('input', function() {
+                                this.value = '';
+                            });
+                        }
+                    });
+                })();
+            </script>
+
+            <div class="form-group">
+                <label class="form-label">学院</label>
+                <input type="text" class="form-control" value="{{ current_user.college or '未设置' }}" disabled>
+            </div>
+
+            <div class="form-group">
+                {{ form.contact_info.label(class="form-label") }}
+                {{ form.contact_info(class="form-control", placeholder="请输入联系方式（如手机号）") }}
+                {% if form.contact_info.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.contact_info.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">角色</label>
+                <input type="text" class="form-control" value="学院管理员" disabled>
+            </div>
+
+            <div class="card-header" style="margin-top: var(--spacing-xl); padding-top: var(--spacing-lg);">
+                <h2>修改密码</h2>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-sm);">如需修改密码，请填写以下信息（留空则不修改）</p>
+            </div>
+
+            <div class="form-group">
+                {{ form.old_password.label(class="form-label") }}
+                {{ form.old_password(class="form-control", autocomplete="current-password") }}
+                {% if form.old_password.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.old_password.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.new_password.label(class="form-label") }}
+                {{ form.new_password(class="form-control", autocomplete="new-password") }}
+                {% if form.new_password.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.new_password.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.confirm_password.label(class="form-label") }}
+                {{ form.confirm_password(class="form-control", autocomplete="new-password") }}
+                {% if form.confirm_password.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.confirm_password.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-block">保存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleEditForm() {
+    const editFormCard = document.getElementById('edit-form-card');
+    const editBtn = document.getElementById('edit-btn');
+    
+    if (editFormCard.style.display === 'none') {
+        editFormCard.style.display = 'block';
+        editBtn.textContent = '取消编辑';
+        // 滚动到表单位置
+        editFormCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        editFormCard.style.display = 'none';
+        editBtn.textContent = '编辑个人信息';
+    }
+}
+</script>
+{% endblock %}

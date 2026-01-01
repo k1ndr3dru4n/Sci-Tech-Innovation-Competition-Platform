@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}专家建议 - 学生{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>专家建议</h1>
+</div>
+
+{% if projects_with_suggestions %}
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+            {% for item in projects_with_suggestions %}
+            <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid var(--primary-color);">
+                <div style="margin-bottom: var(--spacing-md);">
+                    <h3 style="margin: 0 0 var(--spacing-xs) 0; font-size: 1.1em;">
+                        <a href="{{ url_for('student.view_project', project_id=item.project.id) }}" style="color: var(--primary-color); text-decoration: none;">{{ item.project.title }}</a>
+                    </h3>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.9em;">{{ item.project.competition.name }}</p>
+                </div>
+                
+                {% if item.has_suggestions %}
+                <div style="margin-top: var(--spacing-md);">
+                    <h4 style="margin: 0 0 var(--spacing-sm) 0; font-size: 0.95em; color: var(--text-secondary);">专家建议：</h4>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                        {% for suggestion in item.suggestions %}
+                        <div style="padding: var(--spacing-sm); background: var(--surface-color); border-radius: var(--radius-xs); white-space: pre-wrap; line-height: 1.6;">{{ suggestion }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div style="margin-top: var(--spacing-md); color: var(--text-secondary);">
+                    <p style="margin: 0;">暂无专家建议</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>暂无专家建议</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                专家评审完成后，建议将显示在此处
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

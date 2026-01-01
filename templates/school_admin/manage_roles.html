@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}角色管理 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>角色管理</h1>
+    <a href="{{ url_for('school_admin.roles') }}" class="btn btn-secondary">返回角色列表</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>用户：{{ user.real_name }}</h2>
+        <p style="margin: 0; color: var(--text-secondary); font-size: 0.875rem;">
+            学工号/用户名：{{ user.work_id or user.username or '未设置' }}
+        </p>
+    </div>
+    <div class="card-body">
+        <div style="margin-bottom: var(--spacing-lg);">
+            <h3 style="margin-bottom: var(--spacing-md);">主角色</h3>
+            <div>
+                {% if user.role == 'student' %}
+                    <span class="badge badge-info" style="font-size: 1rem; padding: 6px 12px;">学生</span>
+                {% elif user.role == 'college_admin' %}
+                    <span class="badge badge-warning" style="font-size: 1rem; padding: 6px 12px;">学院管理员</span>
+                {% elif user.role == 'school_admin' %}
+                    <span class="badge badge-success" style="font-size: 1rem; padding: 6px 12px;">校级管理员</span>
+                {% elif user.role == 'judge' %}
+                    <span class="badge badge-judge" style="font-size: 1rem; padding: 6px 12px;">校外评委</span>
+                {% else %}
+                    <span class="badge" style="font-size: 1rem; padding: 6px 12px;">{{ user.role }}</span>
+                {% endif %}
+                <small style="color: var(--text-secondary); margin-left: var(--spacing-sm);">（主角色在编辑用户时修改）</small>
+            </div>
+        </div>
+
+        <div style="margin-bottom: var(--spacing-lg);">
+            <h3 style="margin-bottom: var(--spacing-md);">额外角色</h3>
+            {% if additional_roles %}
+                <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
+                    {% for role in additional_roles %}
+                        <div style="display: flex; align-items: center; gap: var(--spacing-xs); background: var(--bg-color); padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border-color);">
+                            {% if role == 'student' %}
+                                <span class="badge badge-info">学生</span>
+                            {% elif role == 'college_admin' %}
+                                <span class="badge badge-warning">学院管理员</span>
+                            {% elif role == 'school_admin' %}
+                                <span class="badge badge-success">校级管理员</span>
+                            {% elif role == 'judge' %}
+                                <span class="badge badge-judge">校外评委</span>
+                            {% else %}
+                                <span class="badge">{{ role }}</span>
+                            {% endif %}
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeRole('{{ role }}')" style="padding: 2px 8px; font-size: 0.75rem;">删除</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--text-secondary); margin-bottom: var(--spacing-md);">暂无额外角色</p>
+            {% endif %}
+
+            <div>
+                <label for="role-select" style="display: block; margin-bottom: var(--spacing-xs); font-weight: 500;">添加角色：</label>
+                <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
+                    <select id="role-select" class="form-control" style="width: 200px;">
+                        <option value="">请选择角色</option>
+                        {% set available_roles = [
+                            ('student', '学生'),
+                            ('college_admin', '学院管理员'),
+                            ('school_admin', '校级管理员'),
+                            ('judge', '校外评委')
+                        ] %}
+                        {% for role_code, role_name in available_roles %}
+                            {% if role_code != user.role and role_code not in additional_roles %}
+                                <option value="{{ role_code }}">{{ role_name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-primary" onclick="addRole()">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addRole() {
+    const roleSelect = document.getElementById('role-select');
+    const role = roleSelect.value;
+    
+    if (!role) {
+        alert('请选择要添加的角色');
+        return;
+    }
+    
+    fetch('{{ url_for("school_admin.add_user_role", user_id=user.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role: role })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || '添加角色失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('添加角色时发生错误');
+    });
+}
+
+function removeRole(role) {
+    if (!confirm('确定要移除该角色吗？')) {
+        return;
+    }
+    
+    fetch('{{ url_for("school_admin.remove_user_role", user_id=user.id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role: role })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || '移除角色失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('移除角色时发生错误');
+    });
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}项目奖项 - 学生{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>项目奖项</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('student.project_awards') }}" class="tab-nav-item {% if request.endpoint == 'student.project_awards' %}active{% endif %}">项目奖项</a>
+    <a href="{{ url_for('student.upload_awards') }}" class="tab-nav-item {% if request.endpoint == 'student.upload_awards' %}active{% endif %}">上传省赛/国赛奖状</a>
+</div>
+
+{% if projects_with_awards %}
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+            {% for item in projects_with_awards %}
+            <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid var(--success-color);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-md);">
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 var(--spacing-xs) 0; font-size: 1.1em;">
+                            <a href="{{ url_for('student.view_project', project_id=item.project.id) }}" style="color: var(--primary-color); text-decoration: none;">{{ item.project.title }}</a>
+                        </h3>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9em;">{{ item.project.competition.name }}</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: var(--spacing-md);">
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+                        {% if item.awards %}
+                        <div style="margin-bottom: var(--spacing-sm);">
+                            <h4 style="margin: 0; font-size: 0.95em; color: var(--text-secondary);">校赛奖项</h4>
+                        </div>
+                        {% for award in item.awards %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md); background: var(--surface-color); border-radius: var(--radius-xs);">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 500; font-size: 1.05em; margin-bottom: var(--spacing-xs); color: var(--success-color);">{{ award.award_name }}</div>
+                                <div style="color: var(--text-secondary); font-size: 0.875rem;">设置时间：{{ award.created_at.strftime('%Y-%m-%d %H:%M') if award.created_at else '未知' }}</div>
+                            </div>
+                            {% if award.certificate_path %}
+                            <div style="display: flex; gap: var(--spacing-xs);">
+                                <a href="{{ url_for('student.view_certificate', project_id=item.project.id, award_id=award.id) }}" class="btn btn-sm btn-secondary" target="_blank">查看证书</a>
+                                <a href="{{ url_for('student.download_certificate', project_id=item.project.id, award_id=award.id) }}" class="btn btn-sm btn-primary">下载证书</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        
+                        {% if item.external_awards %}
+                        <div style="margin-top: {% if item.awards %}var(--spacing-md){% else %}0{% endif %}; margin-bottom: var(--spacing-sm);">
+                            <h4 style="margin: 0; font-size: 0.95em; color: var(--text-secondary);">省赛/国赛奖项</h4>
+                        </div>
+                        {% for ext_award in item.external_awards %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md); background: var(--surface-color); border-radius: var(--radius-xs);">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 500; font-size: 1.05em; margin-bottom: var(--spacing-xs); color: var(--primary-color);">
+                                    {{ ext_award.award_level }} - {{ ext_award.award_name }}
+                                </div>
+                                <div style="color: var(--text-secondary); font-size: 0.875rem;">上传时间：{{ ext_award.created_at.strftime('%Y-%m-%d %H:%M') if ext_award.created_at else '未知' }}</div>
+                            </div>
+                            {% if ext_award.certificate_file %}
+                            <div style="display: flex; gap: var(--spacing-xs);">
+                                <a href="{{ url_for('uploaded_file', filename=ext_award.certificate_file) }}" class="btn btn-sm btn-secondary" target="_blank">查看奖状</a>
+                                <a href="{{ url_for('uploaded_file', filename=ext_award.certificate_file, as_attachment=1) }}" class="btn btn-sm btn-primary">下载奖状</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>暂无项目</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                您还没有参与任何项目
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

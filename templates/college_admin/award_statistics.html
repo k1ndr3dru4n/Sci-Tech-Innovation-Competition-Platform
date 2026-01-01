@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}奖项统计 - 学院管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>奖项统计</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>统计概览</h2>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg);">
+            <div style="text-align: center; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                <div style="font-size: 2em; font-weight: bold; color: var(--primary-color); margin-bottom: var(--spacing-xs);">{{ total_projects }}</div>
+                <div style="color: var(--text-secondary);">总项目数</div>
+            </div>
+            <div style="text-align: center; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                <div style="font-size: 2em; font-weight: bold; color: var(--success-color); margin-bottom: var(--spacing-xs);">{{ projects_with_award_count }}</div>
+                <div style="color: var(--text-secondary);">获奖项目数</div>
+            </div>
+            <div style="text-align: center; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                <div style="font-size: 2em; font-weight: bold; color: var(--warning-color); margin-bottom: var(--spacing-xs);">{{ total_awards }}</div>
+                <div style="color: var(--text-secondary);">总奖项数</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if projects_with_awards %}
+<div class="card">
+    <div class="card-header">
+        <h2>{{ college }} - 项目奖项列表</h2>
+    </div>
+    <div class="card-body">
+        <div class="table-container" style="overflow-x: auto;">
+            <table style="width: 100%; min-width: 1000px; border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr>
+                        <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">项目名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 150px;">竞赛名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 100px;">队长</th>
+                        <th style="padding: 10px; text-align: center; min-width: 200px;">奖项名称</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">设置/上传时间</th>
+                        <th style="padding: 10px; text-align: center; min-width: 180px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set row_index = 0 %}
+                    {% for item in projects_with_awards %}
+                    {% set project = item.project %}
+                    {% set total_awards_count = (item.awards|length) + (item.external_awards|length) %}
+                    {% set is_first_row = True %}
+                    {% set row_index = row_index + 1 %}
+                    
+                    {# 显示校赛奖项 #}
+                    {% for award in item.awards %}
+                    <tr>
+                        {% if is_first_row %}
+                        <td style="white-space: nowrap; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}">
+                            <strong>{{ row_index }}</strong>
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}" title="{{ project.title }}">
+                            {{ project.title }}
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}" title="{{ project.competition.name }}">{{ project.competition.name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}">{{ project.team.leader.real_name }}</td>
+                        {% set is_first_row = False %}
+                        {% endif %}
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <span class="badge badge-info">校赛 - {{ award.award_name }}</span>
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ award.created_at.strftime('%Y-%m-%d %H:%M') if award.created_at else '未知' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <div style="display: flex; gap: var(--spacing-xs); justify-content: center;">
+                                {% if award.certificate_path %}
+                                <a href="{{ url_for('college_admin.view_certificate', project_id=project.id, award_id=award.id) }}" class="btn btn-sm btn-secondary" target="_blank">查看证书</a>
+                                <a href="{{ url_for('college_admin.download_certificate', project_id=project.id, award_id=award.id) }}" class="btn btn-sm btn-primary">下载证书</a>
+                                {% else %}
+                                <span style="color: var(--text-secondary); font-size: 0.875rem;">证书未生成</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {# 显示省赛/国赛奖状 #}
+                    {% for ext_award in item.external_awards %}
+                    <tr>
+                        {% if is_first_row %}
+                        <td style="white-space: nowrap; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}">
+                            <strong>{{ row_index }}</strong>
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}" title="{{ project.title }}">
+                            {{ project.title }}
+                        </td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}" title="{{ project.competition.name }}">{{ project.competition.name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center; vertical-align: middle;" rowspan="{{ total_awards_count }}">{{ project.team.leader.real_name }}</td>
+                        {% set is_first_row = False %}
+                        {% endif %}
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <span class="badge badge-primary">{{ ext_award.award_level }} - {{ ext_award.award_name }}</span>
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ ext_award.created_at.strftime('%Y-%m-%d %H:%M') if ext_award.created_at else '未知' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <div style="display: flex; gap: var(--spacing-xs); justify-content: center;">
+                                {% if ext_award.certificate_file %}
+                                {% set file_path_url = ext_award.certificate_file.replace('\\', '/') %}
+                                <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-secondary" target="_blank">查看证书</a>
+                                <a href="{{ url_for('uploaded_file', filename=file_path_url, download='true') }}" class="btn btn-sm btn-primary">下载证书</a>
+                                {% else %}
+                                <span style="color: var(--text-secondary); font-size: 0.875rem;">证书未生成</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>暂无奖项信息</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                该学院的项目尚未获得奖项
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

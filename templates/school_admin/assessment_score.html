@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}年度考核分数统计 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>考核模块</h1>
+    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+        <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+            <label for="year_select" style="margin: 0; white-space: nowrap;">年度：</label>
+            <select id="year_select" onchange="window.location.href='{{ url_for('school_admin.assessment_score') }}?year=' + this.value" style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-xs);">
+                {% for year in available_years %}
+                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="{{ url_for('school_admin.export_assessment', year=selected_year) }}" class="btn btn-primary">
+            导出Excel
+        </a>
+    </div>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.assessment') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.assessment' %}active{% endif %}">科创竞赛参与与获奖数据</a>
+    <a href="{{ url_for('school_admin.assessment_score') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.assessment_score' %}active{% endif %}">年度考核分数统计</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>年度考核分数统计（满分10分）</h2>
+    </div>
+    <div class="card-body">
+        {% include 'school_admin/assessment_common_styles.html' %}
+        <div class="assessment-table-container">
+            <table class="assessment-table" style="min-width: 1600px;">
+                <thead>
+                    <tr>
+                        <th class="col-fixed-1">序号</th>
+                        <th class="col-fixed-2">学院</th>
+                        <th colspan="2">7.1 红旅参与（2分）</th>
+                        <th colspan="2">7.2 红旅获奖（3分）</th>
+                        <th colspan="2">7.3 挑战杯等参与（2分）</th>
+                        <th colspan="2">7.4 挑战杯等获奖（3分）</th>
+                        <th>总分</th>
+                    </tr>
+                    <tr>
+                        <th class="col-fixed-1"></th>
+                        <th class="col-fixed-2"></th>
+                        <th>得分</th>
+                        <th>计分说明</th>
+                        <th>得分</th>
+                        <th>计分说明</th>
+                        <th>得分</th>
+                        <th>计分说明</th>
+                        <th>得分</th>
+                        <th>计分说明</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for college in colleges %}
+                    {% set score_data = college_scores.get(college, {}) %}
+                    {% set details = score_data.get('score_details', {}) %}
+                    <tr>
+                        <td class="col-fixed-1"><strong>{{ loop.index }}</strong></td>
+                        <td class="col-fixed-2">{{ college }}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid var(--border-color); font-weight: 600;">
+                            {% set rt_score = details.get('red_travel_participation', {}).get('score') %}
+                            {% if rt_score is not none %}{{ "%.1f"|format(rt_score) }}{% else %}-{% endif %}
+                        </td>
+                        <td style="padding: 10px; text-align: left; border: 1px solid var(--border-color); font-size: 0.9em; max-width: 200px; white-space: normal;">{{ details.get('red_travel_participation', {}).get('note', '') }}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid var(--border-color); font-weight: 600;">{{ "%.1f"|format(details.get('red_travel_award', {}).get('score', 0)) }}</td>
+                        <td style="padding: 10px; text-align: left; border: 1px solid var(--border-color); font-size: 0.9em; max-width: 200px; white-space: normal;">{{ details.get('red_travel_award', {}).get('note', '') }}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid var(--border-color); font-weight: 600;">
+                            {% set cc_score = details.get('challenge_cup_participation', {}).get('score') %}
+                            {% if cc_score is not none %}{{ "%.1f"|format(cc_score) }}{% else %}-{% endif %}
+                        </td>
+                        <td style="padding: 10px; text-align: left; border: 1px solid var(--border-color); font-size: 0.9em; max-width: 200px; white-space: normal;">{{ details.get('challenge_cup_participation', {}).get('note', '') }}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid var(--border-color); font-weight: 600;">{{ "%.1f"|format(details.get('challenge_cup_award', {}).get('score', 0)) }}</td>
+                        <td style="padding: 10px; text-align: left; border: 1px solid var(--border-color); font-size: 0.9em; max-width: 200px; white-space: normal;">{{ details.get('challenge_cup_award', {}).get('note', '') }}</td>
+                        <td style="padding: 10px; text-align: center; border: 1px solid var(--border-color); font-weight: 700; font-size: 1.1em; color: var(--primary-color);">{{ "%.1f"|format(score_data.get('total_score', 0)) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+            <h4 style="margin-bottom: var(--spacing-sm);">计分规则说明</h4>
+            <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--text-secondary); line-height: 1.8;">
+                <li><strong>7.1 红旅参与（2分）：</strong>根据实际申报队伍数与任务要求对比计分</li>
+                <li><strong>7.2 红旅获奖（3分）：</strong>按获奖等级赋分，同一项目取最高奖项。校三0.3分，校二0.6分，校一1分，省三1分，省二2分，省一3分</li>
+                <li><strong>7.3 挑战杯等参与（2分）：</strong>根据挑战杯系列赛事报名数量计分</li>
+                <li><strong>7.4 挑战杯等获奖（3分）：</strong>按获奖等级赋分，同一项目取最高奖项。校三0.3分，校二0.6分，校一1分，省三1分，省二2分，省一3分</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

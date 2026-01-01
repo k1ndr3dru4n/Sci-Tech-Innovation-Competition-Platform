@@ -5,16 +5,19 @@
 {% block content %}
 <div class="page-header">
     <h1>奖项收集/发布</h1>
-    <p class="subtitle">为进入决赛的项目设置奖项</p>
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <form method="GET" action="{{ url_for('school_admin.awards') }}" class="filter-form">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto auto; gap: var(--spacing-md); align-items: end;">
-                <div class="form-group">
-                    <label class="form-label">竞赛名称</label>
-                    <select name="competition_id" class="form-control">
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.award_collection') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.award_collection' %}active{% endif %}">奖项收集</a>
+    <a href="{{ url_for('school_admin.award_publish') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.award_publish' %}active{% endif %}">奖项发布</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center;">
+    <form method="GET" action="{{ url_for('school_admin.awards') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <select name="competition_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;">
                         <option value="">全部</option>
                         {% for competition in competitions %}
                         <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
@@ -23,13 +26,12 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
-                    <button type="submit" class="btn btn-primary">搜索</button>
-                    <a href="{{ url_for('school_admin.awards') }}" class="btn btn-secondary">重置</a>
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.awards') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
                 </div>
             </div>
         </form>
-    </div>
 </div>
 
 <div class="card">

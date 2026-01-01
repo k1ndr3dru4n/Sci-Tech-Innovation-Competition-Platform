@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}编辑用户 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>编辑用户</h1>
+    <a href="{{ url_for('school_admin.users') }}" class="btn btn-secondary">返回用户列表</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('school_admin.edit_user', user_id=user.id) }}">
+            {{ form.hidden_tag() }}
+            {% if form.errors %}
+                <div class="alert alert-error" role="alert">
+                    <strong>表单验证失败：</strong>
+                    <ul style="margin: var(--spacing-sm) 0 0 0; padding-left: var(--spacing-lg);">
+                        {% for field, errors in form.errors.items() %}
+                            {% for error in errors %}
+                                <li>{{ form[field].label.text }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                {{ form.real_name.label(class="form-label") }}
+                {{ form.real_name(class="form-control", required=True) }}
+                {% if form.real_name.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.real_name.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.work_id.label(class="form-label") }}
+                {{ form.work_id(class="form-control") }}
+                <small class="form-text" style="color: var(--text-secondary);">校内用户使用学工号登录</small>
+                {% if form.work_id.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.work_id.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control") }}
+                <small class="form-text" style="color: var(--text-secondary);">校外评委使用用户名登录</small>
+                {% if form.username.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.username.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control") }}
+                {% if form.email.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.email.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.role.label(class="form-label") }}
+                {{ form.role(class="form-control", required=True) }}
+                {% if form.role.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.role.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.college.label(class="form-label") }}
+                {{ form.college(class="form-control") }}
+                <small class="form-text" style="color: var(--text-secondary);">学生和学院管理员使用</small>
+                {% if form.college.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.college.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.unit.label(class="form-label") }}
+                {{ form.unit(class="form-control") }}
+                <small class="form-text" style="color: var(--text-secondary);">校级管理员和校外评委使用</small>
+                {% if form.unit.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.unit.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.contact_info.label(class="form-label") }}
+                {{ form.contact_info(class="form-control") }}
+                {% if form.contact_info.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.contact_info.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.is_active.label(class="form-label") }}
+                <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    {{ form.is_active() }}
+                    <label for="{{ form.is_active.id }}" style="margin: 0; font-weight: normal;">启用账户</label>
+                </div>
+                {% if form.is_active.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.is_active.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.new_password.label(class="form-label") }}
+                {{ form.new_password(class="form-control") }}
+                <small class="form-text" style="color: var(--text-secondary);">留空则不修改密码，填写新密码将更新用户密码</small>
+                {% if form.new_password.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.new_password.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group" style="display: flex; gap: var(--spacing-md);">
+                <button type="submit" class="btn btn-primary">保存</button>
+                <a href="{{ url_for('school_admin.users') }}" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

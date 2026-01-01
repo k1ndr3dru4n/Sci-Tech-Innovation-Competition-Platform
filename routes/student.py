@@ -3,23 +3,87 @@
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, jsonify, session
 from flask_login import login_required, current_user
-from models import db, User, Team, Project, Competition, Track, ProjectTrack, ProjectMember, ReviewStatus, TeamMember, UserRole, Score, ProjectAttachment, Award
-from forms import ProjectForm
+from models import db, User, Team, Project, Competition, Track, ProjectTrack, ProjectMember, ReviewStatus, TeamMember, UserRole, Score, ProjectAttachment, Award, ExternalAward
+from forms import ProjectForm, ExternalAwardForm
 from utils.decorators import student_required
 from utils.file_handler import save_uploaded_file, allowed_file
+from utils.timezone import beijing_now
 from config import Config
 from pathlib import Path
 from datetime import datetime
 import os
+import random
 
 student_bp = Blueprint('student', __name__)
 
-@student_bp.route('/dashboard')
+@student_bp.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 @student_required
 def dashboard():
-    """学生首页 - 显示个人信息"""
-    return render_template('student/dashboard.html')
+    """学生首页 - 显示个人信息和编辑表单"""
+    from forms import ProfileForm
+    
+    form = ProfileForm()
+    
+    if form.validate_on_submit():
+        has_errors = False
+        
+        # 更新基本信息
+        current_user.real_name = form.real_name.data
+        # 邮箱为选填项，如果填写了则验证并更新
+        email_input = form.email.data.strip() if form.email.data else ''
+        # 如果邮箱值等于学工号，说明是浏览器自动填充的，忽略它
+        if email_input and email_input == current_user.work_id:
+            email_input = ''
+        if email_input:
+            # 检查邮箱是否被其他用户使用
+            existing_user = User.query.filter(
+                User.email == email_input,
+                User.id != current_user.id
+            ).first()
+            if existing_user:
+                flash('该邮箱已被其他用户使用', 'error')
+                has_errors = True
+            else:
+                current_user.email = email_input
+        else:
+            # 如果用户没有填写邮箱，保持原值不变
+            pass
+        
+        # 更新联系方式
+        current_user.contact_info = form.contact_info.data
+        
+        # 如果提供了新密码，验证旧密码并更新
+        if form.new_password.data:
+            if not form.old_password.data:
+                flash('请输入当前密码', 'error')
+                has_errors = True
+            elif not current_user.check_password(form.old_password.data):
+                flash('当前密码错误', 'error')
+                has_errors = True
+            elif form.new_password.data != form.confirm_password.data:
+                flash('两次新密码输入不一致', 'error')
+                has_errors = True
+            else:
+                current_user.set_password(form.new_password.data)
+        
+        if has_errors:
+            # 如果有错误，重新填充表单数据并渲染模板
+            form.real_name.data = current_user.real_name
+            form.email.data = ''
+            form.contact_info.data = current_user.contact_info
+            return render_template('student/dashboard.html', form=form)
+        
+        db.session.commit()
+        flash('个人资料更新成功', 'success')
+        return redirect(url_for('student.dashboard'))
+    
+    # 填充表单数据（GET 请求或验证失败时）
+    form.real_name.data = current_user.real_name
+    form.email.data = ''  # 邮箱不默认填写
+    form.contact_info.data = current_user.contact_info
+    
+    return render_template('student/dashboard.html', form=form)
 
 @student_bp.route('/projects')
 @login_required
@@ -48,6 +112,290 @@ def projects():
     projects.sort(key=lambda p: p.created_at, reverse=True)
     
     return render_template('student/projects.html', projects=projects, project_member_dict=project_member_dict)
+
+@student_bp.route('/draw_defense_order')
+@login_required
+@student_required
+def draw_defense_order_page():
+    """答辩抽签页面"""
+    # 获取当前用户作为队长的所有队伍
+    user_teams = TeamMember.query.filter_by(user_id=current_user.id, role='leader').all()
+    leader_teams = [tm.team for tm in user_teams if tm.team.leader_id == current_user.id]
+    
+    # 获取这些队伍的所有项目
+    projects = []
+    for team in leader_teams:
+        team_projects = team.projects.all()
+        for project in team_projects:
+            # 只显示进入决赛的项目
+            if project.is_final or project.competition.defense_order_start or project.competition.defense_order_end:
+                projects.append(project)
+    
+    # 为每个项目计算抽签状态
+    projects_with_status = []
+    now = beijing_now()
+    
+    for project in projects:
+        competition = project.competition
+        can_draw = False
+        order_status = None
+        
+        if project.defense_order:
+            order_status = '已抽取'
+        elif competition.defense_order_start and competition.defense_order_end:
+            if now < competition.defense_order_start:
+                order_status = '未开始'
+            elif now >= competition.defense_order_start and now <= competition.defense_order_end:
+                can_draw = True
+                order_status = '可抽取'
+            else:
+                order_status = '已过期'
+        elif competition.defense_order_start or competition.defense_order_end:
+            # 如果只设置了开始或结束时间之一，也允许抽签
+            can_draw = True
+            order_status = '可抽取'
+        else:
+            order_status = '未设置'
+        
+        projects_with_status.append({
+            'project': project,
+            'can_draw': can_draw,
+            'order_status': order_status
+        })
+    
+    return render_template('student/draw_defense_order.html', projects_with_status=projects_with_status)
+
+@student_bp.route('/view_qq_group')
+@login_required
+@student_required
+def view_qq_group():
+    """查看QQ群页面"""
+    # 获取当前用户参与的所有项目
+    user_teams = TeamMember.query.filter_by(user_id=current_user.id).all()
+    user_projects = []
+    for tm in user_teams:
+        team_projects = tm.team.projects.all()
+        user_projects.extend(team_projects)
+    
+    # 获取这些项目所属的竞赛，并筛选出有QQ群信息的竞赛
+    competitions_dict = {}
+    for project in user_projects:
+        competition = project.competition
+        if competition.id not in competitions_dict:
+            competitions_dict[competition.id] = competition
+    
+    # 筛选出有QQ群号或二维码的竞赛
+    competitions_with_qq = []
+    for competition in competitions_dict.values():
+        if competition.qq_group_number or competition.qq_group_qrcode:
+            competitions_with_qq.append({
+                'competition': competition
+            })
+    
+    return render_template('student/view_qq_group.html', competitions_with_qq=competitions_with_qq)
+
+@student_bp.route('/expert_suggestions')
+@login_required
+@student_required
+def expert_suggestions():
+    """专家建议页面"""
+    # 获取当前用户参与的所有项目
+    user_teams = TeamMember.query.filter_by(user_id=current_user.id).all()
+    teams = [tm.team for tm in user_teams]
+    
+    # 获取通过队伍关联的项目
+    projects = []
+    for team in teams:
+        projects.extend(team.projects.all())
+    
+    # 获取通过项目成员关联的项目
+    project_members = ProjectMember.query.filter_by(user_id=current_user.id).all()
+    for pm in project_members:
+        if pm.project not in projects:
+            projects.append(pm.project)
+    
+    # 去重
+    projects = list(set(projects))
+    
+    # 为每个项目获取专家评分和建议
+    projects_with_suggestions = []
+    for project in projects:
+        scores = Score.query.filter_by(project_id=project.id).all()
+        suggestions = [s.comment for s in scores if s.comment]
+        if scores or suggestions:
+            projects_with_suggestions.append({
+                'project': project,
+                'scores': scores,
+                'suggestions': suggestions,
+                'has_suggestions': len(suggestions) > 0
+            })
+    
+    # 按创建时间倒序排序
+    projects_with_suggestions.sort(key=lambda x: x['project'].created_at, reverse=True)
+    
+    return render_template('student/expert_suggestions.html', projects_with_suggestions=projects_with_suggestions)
+
+@student_bp.route('/project_awards')
+@login_required
+@student_required
+def project_awards():
+    """项目奖项页面"""
+    # 获取当前用户参与的所有项目
+    user_teams = TeamMember.query.filter_by(user_id=current_user.id).all()
+    teams = [tm.team for tm in user_teams]
+    
+    # 获取通过队伍关联的项目
+    projects = []
+    for team in teams:
+        projects.extend(team.projects.all())
+    
+    # 获取通过项目成员关联的项目
+    project_members = ProjectMember.query.filter_by(user_id=current_user.id).all()
+    for pm in project_members:
+        if pm.project not in projects:
+            projects.append(pm.project)
+    
+    # 去重
+    projects = list(set(projects))
+    
+    # 为每个项目获取奖项信息（包括校赛奖项和外部奖项）
+    # 只显示有校赛奖项的项目（校级管理员已设置奖项的项目）
+    projects_with_awards = []
+    for project in projects:
+        awards = Award.query.filter_by(project_id=project.id).all()
+        external_awards = ExternalAward.query.filter_by(project_id=project.id).all()
+        # 只显示有校赛奖项的项目（即校级管理员已设置奖项的项目）
+        if awards:
+            projects_with_awards.append({
+                'project': project,
+                'awards': awards,
+                'external_awards': external_awards
+            })
+    
+    # 按创建时间倒序排序
+    projects_with_awards.sort(key=lambda x: x['project'].created_at, reverse=True)
+    
+    return render_template('student/project_awards.html', projects_with_awards=projects_with_awards)
+
+@student_bp.route('/upload_awards')
+@login_required
+@student_required
+def upload_awards():
+    """奖项上传页面 - 显示可以上传奖项的项目"""
+    # 获取当前用户作为队长的所有项目
+    user_teams = TeamMember.query.filter_by(user_id=current_user.id).all()
+    teams = [tm.team for tm in user_teams if tm.team.leader_id == current_user.id]
+    
+    # 获取通过队伍关联的项目
+    projects = []
+    for team in teams:
+        projects.extend(team.projects.all())
+    
+    # 获取通过项目成员关联的项目（作为队长）
+    project_members = ProjectMember.query.filter_by(user_id=current_user.id).all()
+    for pm in project_members:
+        if pm.project.team.leader_id == current_user.id and pm.project not in projects:
+            projects.append(pm.project)
+    
+    # 去重
+    projects = list(set(projects))
+    
+    # 为每个项目获取外部奖项信息
+    projects_with_info = []
+    for project in projects:
+        external_awards = ExternalAward.query.filter_by(project_id=project.id).all()
+        projects_with_info.append({
+            'project': project,
+            'external_awards': external_awards,
+            'has_external_awards': len(external_awards) > 0
+        })
+    
+    # 按创建时间倒序排序
+    projects_with_info.sort(key=lambda x: x['project'].created_at, reverse=True)
+    
+    return render_template('student/upload_awards.html', projects_with_info=projects_with_info)
+
+@student_bp.route('/project/<int:project_id>/upload_external_award', methods=['GET', 'POST'])
+@login_required
+@student_required
+def upload_external_award(project_id):
+    """上传省赛/国赛奖状"""
+    project = Project.query.get_or_404(project_id)
+    
+    # 检查用户是否为项目队长
+    if project.team.leader_id != current_user.id:
+        flash('只有项目队长可以上传省赛/国赛奖状', 'error')
+        return redirect(url_for('student.upload_awards'))
+    
+    # 检查项目是否开放奖项收集
+    if not project.allow_award_collection:
+        flash('该项目尚未开放奖状上传功能，请联系校级管理员', 'error')
+        return redirect(url_for('student.upload_awards'))
+    
+    form = ExternalAwardForm()
+    
+    if form.validate_on_submit():
+        # 处理文件上传
+        certificate_file_path = None
+        if form.certificate_file.data:
+            file = form.certificate_file.data
+            file_info = save_uploaded_file(file, subfolder=f'external_awards/project_{project_id}')
+            if file_info:
+                certificate_file_path = file_info['file_path']
+        
+        # 创建外部奖项记录
+        external_award = ExternalAward(
+            project_id=project_id,
+            award_level=form.award_level.data,
+            award_name=form.award_name.data,
+            award_organization=None,  # 不再使用此字段
+            award_date=None,  # 不再使用此字段
+            certificate_file=certificate_file_path,
+            description=form.description.data or None,
+            uploaded_by=current_user.id
+        )
+        
+        db.session.add(external_award)
+        db.session.commit()
+        
+        flash('省赛/国赛奖状上传成功', 'success')
+        return redirect(url_for('student.upload_awards'))
+    
+    # 获取已有的外部奖项
+    existing_awards = ExternalAward.query.filter_by(project_id=project_id).all()
+    
+    return render_template('student/upload_external_award.html', 
+                         project=project, 
+                         form=form,
+                         existing_awards=existing_awards)
+
+@student_bp.route('/external_award/<int:award_id>/delete', methods=['POST'])
+@login_required
+@student_required
+def delete_external_award(award_id):
+    """删除省赛/国赛奖状"""
+    external_award = ExternalAward.query.get_or_404(award_id)
+    project = external_award.project
+    
+    # 检查用户是否为项目队长
+    if project.team.leader_id != current_user.id:
+        flash('只有项目队长可以删除省赛/国赛奖状', 'error')
+        return redirect(url_for('student.project_awards'))
+    
+    # 删除文件（如果存在）
+    if external_award.certificate_file:
+        file_path = os.path.join(Config.UPLOAD_FOLDER, external_award.certificate_file)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"删除文件失败: {e}")
+    
+    db.session.delete(external_award)
+    db.session.commit()
+    
+    flash('省赛/国赛奖状已删除', 'success')
+    return redirect(url_for('student.upload_awards'))
 
 @student_bp.route('/team/create', methods=['GET', 'POST'])
 @login_required
@@ -174,7 +522,7 @@ def create_project_info(project_id=None):
     # 获取竞赛类型
     competition_type = competition.competition_type if competition else None
     
-    # 如果是编辑已有项目，填充表单数据
+    # 如果是编辑已有项目，填充表单数据（GET请求时）
     if project and request.method == 'GET':
         form.title.data = project.title
         form.description.data = project.description
@@ -185,6 +533,27 @@ def create_project_info(project_id=None):
         form.innovation_points.data = getattr(project, 'innovation_points', None)
         form.development_status.data = getattr(project, 'development_status', None)
         form.awards_patents_papers.data = getattr(project, 'awards_patents_papers', None)
+    # POST请求时，Flask-WTF会自动保留表单数据，但如果验证失败且是已有项目，需要确保数据正确
+    elif project and request.method == 'POST':
+        # 如果表单数据为空（可能是验证失败），从项目对象恢复
+        if not form.title.data and project.title:
+            form.title.data = project.title
+        if not form.description.data and project.description:
+            form.description.data = project.description
+        if not form.project_category.data and project.project_category:
+            form.project_category.data = project.project_category
+        if not form.push_college.data and project.push_college:
+            form.push_college.data = project.push_college
+        if not form.project_type.data and getattr(project, 'project_type', None):
+            form.project_type.data = getattr(project, 'project_type', None)
+        if not form.project_field.data and getattr(project, 'project_field', None):
+            form.project_field.data = getattr(project, 'project_field', None)
+        if not form.innovation_points.data and getattr(project, 'innovation_points', None):
+            form.innovation_points.data = getattr(project, 'innovation_points', None)
+        if not form.development_status.data and getattr(project, 'development_status', None):
+            form.development_status.data = getattr(project, 'development_status', None)
+        if not form.awards_patents_papers.data and getattr(project, 'awards_patents_papers', None):
+            form.awards_patents_papers.data = getattr(project, 'awards_patents_papers', None)
     
     if request.method == 'POST':
         # 根据竞赛类型进行不同的验证
@@ -232,6 +601,17 @@ def create_project_info(project_id=None):
         if errors:
             for error in errors:
                 flash(error, 'error')
+            # 验证失败时，重新填充表单数据，避免用户输入丢失
+            if project:
+                form.title.data = form.title.data or project.title
+                form.description.data = form.description.data or project.description
+                form.project_category.data = form.project_category.data or project.project_category
+                form.push_college.data = form.push_college.data or project.push_college
+                form.project_type.data = form.project_type.data or getattr(project, 'project_type', None)
+                form.project_field.data = form.project_field.data or getattr(project, 'project_field', None)
+                form.innovation_points.data = form.innovation_points.data or getattr(project, 'innovation_points', None)
+                form.development_status.data = form.development_status.data or getattr(project, 'development_status', None)
+                form.awards_patents_papers.data = form.awards_patents_papers.data or getattr(project, 'awards_patents_papers', None)
         else:
             # 表单验证通过，处理数据
             if not project:
@@ -249,7 +629,11 @@ def create_project_info(project_id=None):
                     status=ReviewStatus.DRAFT
                 )
                 # 根据竞赛类型设置特定字段
-                if competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛':
+                if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道':
+                    project.innovation_points = form.innovation_points.data.strip() if form.innovation_points.data else None
+                    project.development_status = form.development_status.data.strip() if form.development_status.data else None
+                    project.awards_patents_papers = form.awards_patents_papers.data.strip() if form.awards_patents_papers.data else None
+                elif competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛':
                     project.project_type = form.project_type.data
                     project.innovation_points = form.innovation_points.data.strip() if form.innovation_points.data else None
                     project.development_status = form.development_status.data.strip() if form.development_status.data else None
@@ -290,8 +674,10 @@ def create_project_info(project_id=None):
                     project.development_status = form.development_status.data.strip() if form.development_status.data else None
                     project.awards_patents_papers = form.awards_patents_papers.data.strip() if form.awards_patents_papers.data else None
             
-            # 处理附件上传（仅针对"中国国际大学生创新大赛"青年红色筑梦之旅"赛道"）
-            if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' and 'attachments' in request.files:
+            # 处理附件上传（针对"中国国际大学生创新大赛"青年红色筑梦之旅"赛道"、"挑战杯"全国大学生课外学术科技作品竞赛和"挑战杯"中国大学生创业计划大赛）
+            if (competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' or 
+                competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛' or
+                competition_type == '"挑战杯"中国大学生创业计划大赛') and 'attachments' in request.files:
                 files = request.files.getlist('attachments')
                 for file in files:
                     if file and file.filename and allowed_file(file.filename):
@@ -421,7 +807,7 @@ def create_project_members(project_id):
                 existing_pm.member_email = member_data['member_email']
                 if is_confirmed and not existing_pm.is_confirmed:
                     existing_pm.is_confirmed = True
-                    existing_pm.confirmed_at = datetime.utcnow()
+                    existing_pm.confirmed_at = beijing_now()
             else:
                 # 如果不存在，创建新记录
                 pm = ProjectMember(
@@ -437,7 +823,7 @@ def create_project_members(project_id):
                     is_confirmed=is_confirmed
                 )
                 if is_confirmed:
-                    pm.confirmed_at = datetime.utcnow()
+                    pm.confirmed_at = beijing_now()
                 db.session.add(pm)
         
         db.session.commit()
@@ -468,10 +854,12 @@ def submit_project(project_id):
         return redirect(url_for('student.view_project', project_id=project_id))
     
     if project.status in [ReviewStatus.DRAFT, ReviewStatus.COLLEGE_REJECTED]:
-        # 检查所有队员是否已确认
-        if not project.all_members_confirmed():
-            flash('请等待所有队员确认后才能提交', 'error')
-            return redirect(url_for('student.view_project', project_id=project_id))
+        # 对于被拒绝的项目，不需要重新确认队员，可以直接重新提交
+        # 对于草稿状态的项目，需要检查所有队员是否已确认
+        if project.status == ReviewStatus.DRAFT:
+            if not project.all_members_confirmed():
+                flash('请等待所有队员确认后才能提交', 'error')
+                return redirect(url_for('student.view_project', project_id=project_id))
         
         # 如果是从不通过状态重新提交，清除之前的审核意见
         was_rejected = project.status == ReviewStatus.COLLEGE_REJECTED
@@ -506,13 +894,37 @@ def view_project(project_id):
     # 判断是否是队长（队长可以查看所有成员信息）
     is_leader = project.team.leader_id == current_user.id
     
-    # 获取所有专家的评分信息
-    scores = Score.query.filter_by(project_id=project_id).all()
+    # 检查是否可以抽取答辩顺序（只有进入决赛的项目才显示，只有队长可以抽签）
+    can_draw_order = False
+    order_status = None
+    competition = project.competition
+    now = beijing_now()
     
-    # 获取项目奖项
-    awards = Award.query.filter_by(project_id=project_id).all()
+    # 只有进入决赛的项目才显示答辩顺序相关信息
+    if project.is_final:
+        if project.defense_order:
+            order_status = '已抽取'
+        elif is_leader:  # 只有队长才需要判断抽签状态
+            if competition.defense_order_start and competition.defense_order_end:
+                # 确保时间比较使用北京时间
+                if now < competition.defense_order_start:
+                    order_status = '未开始'
+                elif now >= competition.defense_order_start and now <= competition.defense_order_end:
+                    can_draw_order = True
+                    order_status = '可抽取'
+                else:
+                    order_status = '已过期'
+            elif competition.defense_order_start or competition.defense_order_end:
+                # 如果只设置了开始或结束时间之一，也允许抽签
+                can_draw_order = True
+                order_status = '可抽取'
+            else:
+                order_status = '未设置'
+        else:
+            # 非队长成员，显示等待状态
+            order_status = '等待队长抽取'
     
-    return render_template('student/view_project.html', project=project, user_project_member=user_project_member, is_leader=is_leader, scores=scores, awards=awards)
+    return render_template('student/view_project.html', project=project, user_project_member=user_project_member, is_leader=is_leader, can_draw_order=can_draw_order, order_status=order_status)
 
 @student_bp.route('/project/<int:project_id>/delete', methods=['POST'])
 @login_required
@@ -562,12 +974,109 @@ def confirm_project(project_id):
     if project_member.is_confirmed:
         flash('您已经确认过此项目', 'info')
     else:
-        from datetime import datetime
         project_member.is_confirmed = True
-        project_member.confirmed_at = datetime.utcnow()
+        project_member.confirmed_at = beijing_now()
         db.session.commit()
         flash('您已确认参与此项目', 'success')
     
+    return redirect(url_for('student.view_project', project_id=project_id))
+
+@student_bp.route('/project/<int:project_id>/draw_defense_order', methods=['POST'])
+@login_required
+@student_required
+def draw_defense_order(project_id):
+    """抽取答辩顺序"""
+    project = Project.query.get_or_404(project_id)
+    
+    # 检查权限：只有队长可以抽取
+    if project.team.leader_id != current_user.id:
+        # 如果是 JSON 请求，返回 JSON 响应
+        if request.is_json or request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'message': '只有队长可以抽取答辩顺序'}), 403
+        flash('只有队长可以抽取答辩顺序', 'error')
+        return redirect(url_for('student.view_project', project_id=project_id))
+    
+    # 检查项目是否进入决赛
+    if not project.is_final:
+        if request.is_json or request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'message': '只有进入决赛的项目才能抽取答辩顺序'}), 400
+        flash('只有进入决赛的项目才能抽取答辩顺序', 'error')
+        return redirect(url_for('student.view_project', project_id=project_id))
+    
+    # 检查是否已抽取
+    if project.defense_order:
+        if request.is_json or request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'message': '您已经抽取过答辩顺序', 'defense_order': project.defense_order}), 400
+        flash('您已经抽取过答辩顺序', 'error')
+        return redirect(url_for('student.view_project', project_id=project_id))
+    
+    competition = project.competition
+    now = beijing_now()
+    
+    # 检查时间（允许管理员跳过时间检查）
+    skip_time_check = False
+    if request.is_json:
+        skip_time_check = request.json.get('skip_time_check', False) if request.json else False
+    elif request.form:
+        skip_time_check = request.form.get('skip_time_check', 'false').lower() == 'true'
+    
+    if not skip_time_check:
+        if not competition.defense_order_start or not competition.defense_order_end:
+            if request.is_json or request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'message': '管理员尚未设置答辩顺序抽取时间'}), 400
+            flash('管理员尚未设置答辩顺序抽取时间', 'error')
+            return redirect(url_for('student.view_project', project_id=project_id))
+        
+        if now < competition.defense_order_start:
+            if request.is_json or request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'message': '答辩顺序抽取尚未开始'}), 400
+            flash('答辩顺序抽取尚未开始', 'error')
+            return redirect(url_for('student.view_project', project_id=project_id))
+        
+        if now > competition.defense_order_end:
+            if request.is_json or request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'message': '答辩顺序抽取时间已过，请联系管理员'}), 400
+            flash('答辩顺序抽取时间已过，请联系管理员', 'error')
+            return redirect(url_for('student.view_project', project_id=project_id))
+    
+    # 获取该竞赛所有进入决赛的项目
+    all_final_projects = Project.query.filter(
+        Project.competition_id == project.competition_id,
+        Project.is_final == True
+    ).all()
+    
+    # 获取已抽取的顺序
+    taken_orders = set()
+    for p in all_final_projects:
+        if p.defense_order:
+            taken_orders.add(p.defense_order)
+    
+    # 获取可用的顺序列表
+    total_count = len(all_final_projects)
+    available_orders = [i for i in range(1, total_count + 1) if i not in taken_orders]
+    
+    if not available_orders:
+        if request.is_json or request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'message': '所有答辩顺序已被抽取'}), 400
+        flash('所有答辩顺序已被抽取', 'error')
+        return redirect(url_for('student.view_project', project_id=project_id))
+    
+    # 随机抽取一个顺序
+    selected_order = random.choice(available_orders)
+    
+    # 保存结果
+    project.defense_order = selected_order
+    db.session.commit()
+    
+    # 如果是 JSON 请求，返回 JSON 响应
+    if request.is_json or request.headers.get('Content-Type') == 'application/json':
+        return jsonify({
+            'success': True,
+            'message': f'恭喜！您抽取到第{selected_order}位答辩顺序',
+            'defense_order': selected_order
+        })
+    
+    flash(f'恭喜！您抽取到第{selected_order}位答辩顺序', 'success')
     return redirect(url_for('student.view_project', project_id=project_id))
 
 @student_bp.route('/project/<int:project_id>/award/<int:award_id>/view')

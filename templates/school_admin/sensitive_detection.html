@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}脱敏识别 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>脱敏识别</h1>
+    <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.review_project', project_id=project.id) }}" class="tab-nav-item {% if request.endpoint == 'school_admin.review_project' %}active{% endif %}">项目审核</a>
+    <a href="{{ url_for('school_admin.sensitive_detection', project_id=project.id) }}" class="tab-nav-item {% if request.endpoint == 'school_admin.sensitive_detection' %}active{% endif %}">脱敏识别</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>项目信息</h2>
+    </div>
+    <div class="card-body">
+        <div class="detail-row">
+            <span class="detail-label">项目名称</span>
+            <span class="detail-value">{{ project.title }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">竞赛</span>
+            <span class="detail-value">{{ project.competition.name }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>敏感关键词设置</h2>
+    </div>
+    <div class="card-body">
+        <p style="margin: 0; color: var(--text-secondary);">
+            当前设置的敏感关键词：
+            {% for keyword in sensitive_keywords %}
+                <span class="badge badge-warning" style="margin-left: 8px;">{{ keyword }}</span>
+            {% endfor %}
+        </p>
+        <p style="margin-top: var(--spacing-sm); color: var(--text-secondary); font-size: 0.875rem;">
+            说明：系统将自动检测附件中是否包含上述敏感关键词。检测结果仅供参考，最终审核决定由管理员做出。
+        </p>
+    </div>
+</div>
+
+{% if detection_results %}
+<div class="card">
+    <div class="card-header">
+        <h2>附件脱敏识别结果</h2>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+            {% for result in detection_results %}
+            {% set attachment = result.attachment %}
+            <div style="padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid {% if result.has_sensitive %}var(--error-color){% elif result.error %}var(--warning-color){% else %}var(--success-color){% endif %};">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--spacing-md);">
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 var(--spacing-xs) 0; font-size: 1.1em;">
+                            {{ attachment.original_filename }}
+                        </h3>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.9em;">
+                            文件类型：{{ attachment.file_type|upper if attachment.file_type else '未知' }} | 
+                            文件大小：{{ "%.2f"|format(attachment.file_size / 1024 / 1024) }} MB
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-xs);">
+                        {% set file_path_url = attachment.file_path.replace('\\', '/') %}
+                        {% if attachment.file_type.lower() in ['pdf', 'jpg', 'jpeg', 'png', 'gif'] %}
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">在线预览</a>
+                        {% endif %}
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url, download='true') }}" class="btn btn-sm btn-secondary">下载</a>
+                    </div>
+                </div>
+                
+                <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--surface-color); border-radius: var(--radius-xs);">
+                    <div style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);">
+                        <strong style="font-size: 1.05em;">识别状态：</strong>
+                        {% if result.error %}
+                            <span class="badge badge-warning">识别异常</span>
+                        {% elif result.has_sensitive %}
+                            <span class="badge badge-error">发现敏感信息</span>
+                        {% else %}
+                            <span class="badge badge-success">未发现敏感信息</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if result.detected_keywords %}
+                    <div style="margin-bottom: var(--spacing-sm);">
+                        <strong>检测到的关键词：</strong>
+                        {% for keyword in result.detected_keywords %}
+                            <span class="badge badge-error" style="margin-left: 8px;">{{ keyword }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div style="margin-top: var(--spacing-sm);">
+                        <strong>详细说明：</strong>
+                        <div style="margin-top: var(--spacing-xs); padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-xs); box-sizing: border-box;">
+                            {% set details_lines = result.details.strip().split('\n') if result.details else [] %}
+                            <div style="line-height: 1.8; color: var(--text-primary);">
+                                {% for line in details_lines %}
+                                    {% set line_stripped = line.strip() %}
+                                    {% if line_stripped %}
+                                        {% if line_stripped.startswith('检测结果：') %}
+                                            <div style="margin-bottom: var(--spacing-sm);">
+                                                <span style="color: var(--text-secondary); font-weight: 500;">检测结果：</span>
+                                                <span style="color: {% if '包含敏感信息' in line_stripped %}var(--error-color){% else %}var(--success-color){% endif %}; font-weight: 600;">{{ line_stripped.replace('检测结果：', '') }}</span>
+                                            </div>
+                                        {% elif line_stripped.startswith('发现的关键词：') %}
+                                            <div style="margin-bottom: var(--spacing-sm);">
+                                                <span style="color: var(--text-secondary); font-weight: 500;">发现的关键词：</span>
+                                                <span style="color: var(--error-color); font-weight: 600;">{{ line_stripped.replace('发现的关键词：', '') }}</span>
+                                            </div>
+                                        {% elif line_stripped.startswith('详细位置：') %}
+                                            <div style="margin-bottom: 0;">
+                                                <span style="color: var(--text-secondary); font-weight: 500;">详细位置：</span>
+                                                <span style="color: var(--text-primary);">{{ line_stripped.replace('详细位置：', '') }}</span>
+                                            </div>
+                                        {% else %}
+                                            <div style="margin-bottom: {% if not loop.last %}var(--spacing-xs){% else %}0{% endif %}; color: var(--text-primary);">{{ line_stripped }}</div>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if result.error %}
+                    <div style="margin-top: var(--spacing-sm); color: var(--warning-color);">
+                        <strong>注意：</strong>{{ result.error }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>该项目暂无附件</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: var(--spacing-xs);">
+                只有包含附件的项目才能进行脱敏识别
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: var(--spacing-lg);">
+    <div class="card-body">
+        <div style="padding: var(--spacing-md); background: var(--info-bg, #e7f3ff); border-radius: var(--radius-sm); border-left: 3px solid var(--info-color, #2196F3);">
+            <h4 style="margin: 0 0 var(--spacing-sm) 0; color: var(--info-color, #2196F3);">重要提示</h4>
+            <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--text-secondary);">
+                <li>AI识别结果仅供参考，可能存在误判或遗漏，请结合实际情况做出判断</li>
+                <li>如识别结果异常，请手动检查附件内容</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

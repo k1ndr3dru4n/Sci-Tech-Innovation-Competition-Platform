@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}科创竞赛参与与获奖数据 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>考核模块</h1>
+    <div style="display: flex; gap: var(--spacing-md); align-items: center;">
+        <div style="display: flex; align-items: center; gap: var(--spacing-xs);">
+            <label for="year_select" style="margin: 0; white-space: nowrap;">年度：</label>
+            <select id="year_select" onchange="window.location.href='{{ url_for('school_admin.assessment') }}?year=' + this.value" style="padding: 4px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-xs);">
+                {% for year in available_years %}
+                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="{{ url_for('school_admin.export_assessment', year=selected_year) }}" class="btn btn-primary">
+            导出Excel
+        </a>
+    </div>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.assessment') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.assessment' %}active{% endif %}">科创竞赛参与与获奖数据</a>
+    <a href="{{ url_for('school_admin.assessment_score') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.assessment_score' %}active{% endif %}">年度考核分数统计</a>
+    <a href="{{ url_for('school_admin.assessment_aggrid') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.assessment_aggrid' %}active{% endif %}" style="color: #007bff; font-weight: bold;">AG Grid 版本 (测试)</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>科创竞赛参与与获奖数据（按学院列示）</h2>
+    </div>
+    <div class="card-body">
+        {% include 'school_admin/assessment_common_styles.html' %}
+        
+        <!-- 一、"挑战杯"系列赛事 -->
+        <div style="margin-bottom: var(--spacing-lg);">
+            <h3 style="margin-bottom: var(--spacing-md); color: var(--primary-color);">一、"挑战杯"系列赛事-主赛道</h3>
+            
+            <!-- 主赛道 -->
+            <div style="margin-bottom: var(--spacing-md);">
+                <div class="assessment-table-container">
+                    <table class="assessment-table" style="min-width: 2000px;">
+                        <thead>
+                            <tr>
+                                <th class="col-fixed-1">序号</th>
+                                <th class="col-fixed-2">学院</th>
+                                <th style="min-width: 70px;">任务要求</th>
+                                <th style="min-width: 60px;">报名数</th>
+                                <th colspan="3" style="min-width: 150px;">校级获奖</th>
+                                <th colspan="3" style="min-width: 150px;">省级获奖</th>
+                                <th colspan="3" style="min-width: 150px;">国家级获奖</th>
+                                <th style="min-width: 70px;">获奖总数</th>
+                                <th style="min-width: 150px;">特殊情况备注</th>
+                            </tr>
+                            <tr>
+                                <th class="col-fixed-1"></th>
+                                <th class="col-fixed-2"></th>
+                                <th></th>
+                                <th></th>
+                                <th>金奖</th>
+                                <th>银奖</th>
+                                <th>铜奖</th>
+                                <th>金奖</th>
+                                <th>银奖</th>
+                                <th>铜奖</th>
+                                <th>金奖</th>
+                                <th>银奖</th>
+                                <th>铜奖</th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for college in colleges %}
+                            {% set stats = college_stats.get(college, {}) %}
+                            {% set challenge_cup = stats.get('challenge_cup', {}) %}
+                            <tr>
+                                <td class="col-fixed-1"><strong>{{ loop.index }}</strong></td>
+                                <td class="col-fixed-2">{{ college }}</td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="requirement_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('requirement', '') if challenge_cup.get('requirement') is not none else '' }}" 
+                                           min="0" 
+                                           onblur="saveConfigField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="registration_count_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('registration_count', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="school_gold_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('school_awards', {}).get('gold', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="school_silver_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('school_awards', {}).get('silver', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="school_bronze_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('school_awards', {}).get('bronze', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="provincial_gold_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('provincial_awards', {}).get('gold', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="provincial_silver_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('provincial_awards', {}).get('silver', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="provincial_bronze_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('provincial_awards', {}).get('bronze', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="national_gold_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('national_awards', {}).get('gold', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="national_silver_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('national_awards', {}).get('silver', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="national_bronze_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('national_awards', {}).get('bronze', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="total_awards_challenge_cup"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ challenge_cup.get('total_awards', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <textarea class="editable-textarea" 
+                                              data-college="{{ college }}" 
+                                              data-field="special_notes_challenge_cup"
+                                              data-year="{{ selected_year }}"
+                                              rows="1" 
+                                              onblur="saveConfigField(this)">{{ challenge_cup.get('special_notes', '') }}</textarea>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 配套活动 -->
+            <div style="margin-bottom: var(--spacing-md);">
+                <h4 style="margin-bottom: var(--spacing-sm); font-size: 1.1em;">配套活动（如"揭榜挂帅""机器人"等专项赛）</h4>
+                <div class="assessment-table-container">
+                    <table class="assessment-table" style="min-width: 800px;">
+                        <thead>
+                            <tr>
+                                <th class="col-fixed-1">序号</th>
+                                <th class="col-fixed-2">学院</th>
+                                <th style="min-width: 70px;">报名数</th>
+                                <th style="min-width: 70px;">国家级金奖</th>
+                                <th style="min-width: 70px;">国家级银奖</th>
+                                <th style="min-width: 70px;">国家级铜奖</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for college in colleges %}
+                            {% set stats = college_stats.get(college, {}) %}
+                            {% set activities = stats.get('challenge_cup_activities', {}) %}
+                            {% set national_awards = activities.get('national_awards', {}) %}
+                            <tr>
+                                <td class="col-fixed-1"><strong>{{ loop.index }}</strong></td>
+                                <td class="col-fixed-2">{{ college }}</td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="activities_registration_count"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ activities.get('registration_count', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="activities_national_gold"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ national_awards.get('gold', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="activities_national_silver"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ national_awards.get('silver', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                                <td>
+                                    <input type="number" class="editable-input" 
+                                           data-college="{{ college }}" 
+                                           data-field="activities_national_bronze"
+                                           data-year="{{ selected_year }}"
+                                           value="{{ national_awards.get('bronze', 0) }}" 
+                                           min="0" 
+                                           onblur="saveDataField(this)">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 二、中国国际大学生创新大赛"青年红色筑梦之旅"（红旅）赛道 -->
+        <div style="margin-bottom: var(--spacing-lg);">
+            <h3 style="margin-bottom: var(--spacing-md); color: var(--primary-color);">二、中国国际大学生创新大赛"青年红色筑梦之旅"（红旅）赛道</h3>
+            
+            <div class="assessment-table-container">
+                <table class="assessment-table" style="min-width: 2000px;">
+                    <thead>
+                        <tr>
+                            <th class="col-fixed-1" style="min-width: 50px; max-width: 50px;">序号</th>
+                            <th class="col-fixed-2" style="min-width: 100px; max-width: 100px;">学院</th>
+                            <th style="min-width: 70px;">任务要求</th>
+                            <th style="min-width: 60px;">报名数</th>
+                            <th colspan="3" style="min-width: 150px;">校级获奖</th>
+                            <th colspan="3" style="min-width: 150px;">省级获奖</th>
+                            <th colspan="3" style="min-width: 150px;">国家级获奖</th>
+                            <th style="min-width: 70px;">获奖总数</th>
+                            <th style="min-width: 150px;">特殊情况备注</th>
+                        </tr>
+                        <tr>
+                            <th class="col-fixed-1"></th>
+                            <th class="col-fixed-2"></th>
+                            <th></th>
+                            <th></th>
+                            <th>金奖</th>
+                            <th>银奖</th>
+                            <th>铜奖</th>
+                            <th>金奖</th>
+                            <th>银奖</th>
+                            <th>铜奖</th>
+                            <th>金奖</th>
+                            <th>银奖</th>
+                            <th>铜奖</th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for college in colleges %}
+                        {% set stats = college_stats.get(college, {}) %}
+                        {% set red_travel = stats.get('red_travel', {}) %}
+                        <tr>
+                            <td class="col-fixed-1"><strong>{{ loop.index }}</strong></td>
+                            <td class="col-fixed-2">{{ college }}</td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="requirement_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('requirement', '') if red_travel.get('requirement') is not none else '' }}" 
+                                       min="0" 
+                                       onblur="saveConfigField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="registration_count_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('registration_count', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="school_gold_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('school_awards', {}).get('gold', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="school_silver_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('school_awards', {}).get('silver', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="school_bronze_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('school_awards', {}).get('bronze', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="provincial_gold_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('provincial_awards', {}).get('gold', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="provincial_silver_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('provincial_awards', {}).get('silver', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="provincial_bronze_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('provincial_awards', {}).get('bronze', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="national_gold_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('national_awards', {}).get('gold', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="national_silver_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('national_awards', {}).get('silver', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="national_bronze_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('national_awards', {}).get('bronze', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <input type="number" class="editable-input" 
+                                       data-college="{{ college }}" 
+                                       data-field="total_awards_red_travel"
+                                       data-year="{{ selected_year }}"
+                                       value="{{ red_travel.get('total_awards', 0) }}" 
+                                       min="0" 
+                                       onblur="saveDataField(this)">
+                            </td>
+                            <td>
+                                <textarea class="editable-textarea" 
+                                          data-college="{{ college }}" 
+                                          data-field="special_notes_red_travel"
+                                          data-year="{{ selected_year }}"
+                                          rows="1" 
+                                          onblur="saveConfigField(this)">{{ red_travel.get('special_notes', '') }}</textarea>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+function saveConfigField(element) {
+    const college = element.getAttribute('data-college');
+    const field = element.getAttribute('data-field');
+    const year = element.getAttribute('data-year');
+    const value = element.value;
+    
+    // 发送AJAX请求保存数据
+    fetch('{{ url_for("school_admin.save_assessment_config") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            year: parseInt(year),
+            college: college,
+            field_type: field,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 可选：显示成功提示
+            // console.log('保存成功');
+        } else {
+            alert('保存失败：' + (data.message || '未知错误'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('保存失败，请重试');
+    });
+}
+
+function saveDataField(element) {
+    const college = element.getAttribute('data-college');
+    const field = element.getAttribute('data-field');
+    const year = element.getAttribute('data-year');
+    const value = element.value;
+    
+    // 发送AJAX请求保存统计数据
+    fetch('{{ url_for("school_admin.save_assessment_data") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            year: parseInt(year),
+            college: college,
+            field_type: field,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 可选：显示成功提示
+            // console.log('保存成功');
+        } else {
+            alert('保存失败：' + (data.message || '未知错误'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('保存失败，请重试');
+    });
+}
+</script>
+{% endblock %}
+

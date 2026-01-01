@@ -5,22 +5,21 @@
 {% block content %}
 <div class="page-header">
     <h1>校赛决赛</h1>
-    <p class="subtitle">进入决赛的项目（根据专家初审结果确定）</p>
-    {% if final_projects %}
-    <form method="POST" action="{{ url_for('school_admin.draw_lots_final') }}" style="display: inline-block; margin-left: var(--spacing-md);" onsubmit="return confirm('确定要随机抽签决定答辩顺序吗？此操作将重新分配所有进入决赛项目的答辩顺序。');">
-        <input type="hidden" name="competition_id" value="{{ selected_competition_id or '' }}">
-        <button type="submit" class="btn btn-primary">随机抽签决定答辩顺序</button>
-    </form>
-    {% endif %}
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <form method="GET" action="{{ url_for('school_admin.final_competition') }}" class="filter-form">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto auto; gap: var(--spacing-md); align-items: end;">
-                <div class="form-group">
-                    <label class="form-label">竞赛名称</label>
-                    <select name="competition_id" class="form-control">
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.final_competition') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.final_competition' %}active{% endif %}">校赛决赛</a>
+    <a href="{{ url_for('school_admin.defense_order') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order' %}active{% endif %}">答辩顺序</a>
+    <a href="{{ url_for('school_admin.defense_order_time') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order_time' %}active{% endif %}">答辩顺序时间</a>
+    <a href="{{ url_for('school_admin.qq_group') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.qq_group' %}active{% endif %}">QQ群管理</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center;">
+    <form method="GET" action="{{ url_for('school_admin.final_competition') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <select name="competition_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;">
                         <option value="">全部</option>
                         {% for competition in competitions %}
                         <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
@@ -29,20 +28,16 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div style="display: flex; gap: var(--spacing-sm); align-items: center;">
-                    <button type="submit" class="btn btn-primary">搜索</button>
-                    <a href="{{ url_for('school_admin.final_competition') }}" class="btn btn-secondary">重置</a>
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.final_competition') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
                 </div>
             </div>
         </form>
-    </div>
 </div>
 
 {% if final_projects or non_final_projects %}
 <div class="card">
-    <div class="card-header">
-        <h2>进入决赛的项目</h2>
-    </div>
     <div class="card-body">
         {% if final_projects %}
         <div class="table-container" style="overflow-x: auto;">

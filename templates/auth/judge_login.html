@@ -11,7 +11,7 @@
             
             <div class="form-group">
                 {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control", autocomplete="username", required=True, aria_required="true", placeholder="请输入用户名或邮箱") }}
+                {{ form.username(class="form-control", autocomplete="username", required=True, aria_required="true", placeholder="请输入用户名") }}
                 {% if form.username.errors %}
                     <div class="form-error" role="alert">
                         {% for error in form.username.errors %}

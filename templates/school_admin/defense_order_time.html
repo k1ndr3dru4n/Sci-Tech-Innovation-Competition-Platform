@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}答辩顺序时间设置 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>答辩顺序时间设置</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.final_competition') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.final_competition' %}active{% endif %}">校赛决赛</a>
+    <a href="{{ url_for('school_admin.defense_order') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order' %}active{% endif %}">答辩顺序</a>
+    <a href="{{ url_for('school_admin.defense_order_time') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order_time' %}active{% endif %}">答辩顺序时间</a>
+    <a href="{{ url_for('school_admin.qq_group') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.qq_group' %}active{% endif %}">QQ群管理</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center;">
+    <form method="GET" action="{{ url_for('school_admin.defense_order_time') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <select name="competition_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;" onchange="this.form.submit()">
+                        <option value="">请选择竞赛</option>
+                        {% for competition in competitions %}
+                        <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
+                            {{ competition.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+        </div>
+    </form>
+</div>
+
+{% if selected_competition_id %}
+<div class="card" style="margin-top: var(--spacing-md);">
+    <div class="card-body" style="padding: 12px;">
+        <form method="POST" action="{{ url_for('school_admin.defense_order_time') }}">
+            <input type="hidden" name="competition_id" value="{{ selected_competition_id }}">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 4px;">竞赛名称</label>
+                {% for comp in competitions %}
+                    {% if comp.id == selected_competition_id %}
+                        <input type="text" class="form-control" value="{{ comp.name }}" readonly style="font-size: 0.875rem; padding: 4px 8px;">
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 4px;">{{ time_form.defense_order_start.label.text }}</label>
+                {{ time_form.defense_order_start(class="form-control", type="datetime-local", style="font-size: 0.875rem; padding: 4px 8px;") }}
+                <small class="form-text" style="font-size: 0.75rem; color: var(--text-secondary);">进入决赛的队伍负责人可以开始抽取答辩顺序的时间</small>
+                {% if time_form.defense_order_start.errors %}
+                    <div class="form-error" role="alert" style="font-size: 0.75rem; color: var(--error-color); margin-top: 4px;">
+                        {% for error in time_form.defense_order_start.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 4px;">{{ time_form.defense_order_end.label.text }}</label>
+                {{ time_form.defense_order_end(class="form-control", type="datetime-local", style="font-size: 0.875rem; padding: 4px 8px;") }}
+                <small class="form-text" style="font-size: 0.75rem; color: var(--text-secondary);">答辩顺序抽取的截止时间，超时未抽取的将自动随机分配</small>
+                {% if time_form.defense_order_end.errors %}
+                    <div class="form-error" role="alert" style="font-size: 0.75rem; color: var(--error-color); margin-top: 4px;">
+                        {% for error in time_form.defense_order_end.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <button type="submit" class="btn btn-primary" style="font-size: 0.875rem; padding: 6px 16px;">保存设置</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="card" style="margin-top: var(--spacing-md);">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>请先选择竞赛</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

@@ -8,150 +8,213 @@
     <a href="javascript:history.back()" class="btn btn-secondary">返回</a>
 </div>
 
-<div class="project-detail">
-    <div class="project-detail-section">
-        <h3>项目基本信息</h3>
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.review_project', project_id=project.id) }}" class="tab-nav-item {% if request.endpoint == 'school_admin.review_project' %}active{% endif %}">项目审核</a>
+    <a href="{{ url_for('school_admin.sensitive_detection', project_id=project.id) }}" class="tab-nav-item {% if request.endpoint == 'school_admin.sensitive_detection' %}active{% endif %}">脱敏识别</a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>项目信息</h2>
+    </div>
+    <div class="card-body">
         <div class="detail-row">
-            <div class="detail-label">项目名称：</div>
-            <div class="detail-value">{{ project.title }}</div>
+            <span class="detail-label">项目名称</span>
+            <span class="detail-value">{{ project.title }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">项目简介</span>
+            <span class="detail-value" style="white-space: pre-wrap;">{{ project.description }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">竞赛</span>
+            <span class="detail-value">{{ project.competition.name }}</span>
         </div>
         {% if project.project_category %}
         <div class="detail-row">
-            <div class="detail-label">项目组别：</div>
-            <div class="detail-value">{{ project.project_category }}</div>
+            <span class="detail-label">项目组别</span>
+            <span class="detail-value">{{ project.project_category }}</span>
         </div>
         {% endif %}
         {% if project.project_type %}
         <div class="detail-row">
-            <div class="detail-label">作品类别：</div>
-            <div class="detail-value">{{ project.project_type }}</div>
+            <span class="detail-label">作品类别</span>
+            <span class="detail-value">{{ project.project_type }}</span>
         </div>
         {% endif %}
         {% if project.project_field %}
         <div class="detail-row">
-            <div class="detail-label">项目领域：</div>
-            <div class="detail-value">{{ project.project_field }}</div>
+            <span class="detail-label">项目领域</span>
+            <span class="detail-value">{{ project.project_field }}</span>
         </div>
         {% endif %}
+        {% if project.push_college %}
         <div class="detail-row">
-            <div class="detail-label">作品推送学院：</div>
-            <div class="detail-value">{{ project.push_college or '未填写' }}</div>
+            <span class="detail-label">作品推送学院</span>
+            <span class="detail-value">{{ project.push_college }}</span>
         </div>
-        <div class="detail-row">
-            <div class="detail-label">队长：</div>
-            <div class="detail-value">{{ project.team.leader.real_name }}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">队长学工号：</div>
-            <div class="detail-value">{{ project.team.leader.work_id or '未设置' }}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">学院：</div>
-            <div class="detail-value">{{ project.team.leader.college or '未设置' }}</div>
-        </div>
-    </div>
-
-    <div class="project-detail-section">
-        <h3>项目简介</h3>
-        <p style="white-space: pre-wrap;">{{ project.description }}</p>
-    </div>
-
-    {% if project.innovation_points or project.development_status or project.awards_patents_papers %}
-    <div class="project-detail-section">
-        <h3>项目详细信息</h3>
+        {% endif %}
         {% if project.innovation_points %}
         <div class="detail-row">
-            <div class="detail-label">项目创新点：</div>
-            <div class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</div>
+            <span class="detail-label">项目创新点</span>
+            <span class="detail-value" style="white-space: pre-wrap;">{{ project.innovation_points }}</span>
         </div>
         {% endif %}
         {% if project.development_status %}
         <div class="detail-row">
-            <div class="detail-label">项目开发现状：</div>
-            <div class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</div>
+            <span class="detail-label">项目开发现状</span>
+            <span class="detail-value" style="white-space: pre-wrap;">{{ project.development_status }}</span>
         </div>
         {% endif %}
         {% if project.awards_patents_papers %}
         <div class="detail-row">
-            <div class="detail-label">获奖、专利及论文情况：</div>
-            <div class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</div>
+            <span class="detail-label">获奖、专利及论文情况</span>
+            <span class="detail-value" style="white-space: pre-wrap;">{{ project.awards_patents_papers }}</span>
+        </div>
+        {% endif %}
+        {% if project.instructor_name %}
+        <div class="detail-row">
+            <span class="detail-label">指导教师</span>
+            <span class="detail-value" style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                <div>姓名：{{ project.instructor_name }}</div>
+                {% if project.instructor_work_id %}
+                <div>学工号：{{ project.instructor_work_id }}</div>
+                {% endif %}
+                {% if project.instructor_unit %}
+                <div>单位：{{ project.instructor_unit }}</div>
+                {% endif %}
+                {% if project.instructor_phone %}
+                <div>联系方式：{{ project.instructor_phone }}</div>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+        {% if project.competition.competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' and project.attachments.count() > 0 %}
+        <div class="detail-row" style="flex-direction: column; align-items: flex-start; gap: var(--spacing-sm);">
+            <span class="detail-label">项目附件（专家评审材料）</span>
+            <div class="file-list" style="width: 100%; display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                {% for attachment in project.attachments.all() %}
+                <div class="file-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm); background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                    <div style="flex: 1;">
+                        <span style="font-weight: 500;">{{ attachment.original_filename }}</span>
+                        <span style="color: var(--text-secondary); font-size: 0.9em; margin-left: var(--spacing-sm);">
+                            ({{ "%.2f"|format(attachment.file_size / 1024 / 1024) }} MB)
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-xs);">
+                        {% set file_path_url = attachment.file_path.replace('\\', '/') %}
+                        {% if attachment.file_type.lower() in ['pdf', 'jpg', 'jpeg', 'png', 'gif'] %}
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">在线预览</a>
+                        {% else %}
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">在线预览</a>
+                        {% endif %}
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url, download='true') }}" class="btn btn-sm btn-secondary">下载</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <span class="detail-label">项目状态</span>
+            <span class="detail-value">
+                {% if project.status == 'draft' %}
+                    <span class="badge badge-warning">草稿</span>
+                {% elif project.status == 'submitted' %}
+                    <span class="badge badge-info">学院审核中</span>
+                {% elif project.status == 'college_approved' %}
+                    <span class="badge badge-success">学院已通过，学校审核中</span>
+                {% elif project.status == 'college_rejected' %}
+                    <span class="badge badge-error">不通过</span>
+                {% elif project.status == 'final_approved' %}
+                    <span class="badge badge-success">学校已通过</span>
+                {% elif project.status == 'final_rejected' %}
+                    <span class="badge badge-error">学校审核不通过</span>
+                {% else %}
+                    <span class="badge">{{ project.status }}</span>
+                {% endif %}
+            </span>
+        </div>
+        {% if project.college_review_comment %}
+        <div class="detail-row">
+            <span class="detail-label">学院审核意见</span>
+            <span class="detail-value">
+                {% if project.status == 'college_rejected' %}
+                    <div style="color: var(--error-color); font-weight: 500; margin-bottom: var(--spacing-xs);">不通过</div>
+                {% endif %}
+                <div>{{ project.college_review_comment }}</div>
+            </span>
         </div>
         {% endif %}
     </div>
-    {% endif %}
+</div>
 
-    <div class="project-detail-section">
-        <h3>队员信息</h3>
-        {% if project.project_members %}
+<div class="card">
+    <div class="card-header">
+        <h2>项目成员（按顺位）</h2>
+    </div>
+    <div class="card-body">
         <div class="table-container" style="overflow-x: auto;">
-            <table style="width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0;">
+            <table style="width: 100%; min-width: 1200px; border-collapse: separate; border-spacing: 0;">
                 <thead>
                     <tr>
                         <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
-                        <th style="padding: 10px; text-align: center; min-width: 60px;">顺位</th>
+                        <th style="padding: 10px; text-align: center; min-width: 80px;">顺位</th>
                         <th style="padding: 10px; text-align: center; min-width: 100px;">姓名</th>
-                        <th style="padding: 10px; text-align: center; min-width: 120px;">学号</th>
+                        <th style="padding: 10px; text-align: center; min-width: 120px;">学工号</th>
                         <th style="padding: 10px; text-align: center; min-width: 150px;">学院</th>
                         <th style="padding: 10px; text-align: center; min-width: 120px;">专业</th>
                         <th style="padding: 10px; text-align: center; min-width: 120px;">联系方式</th>
                         <th style="padding: 10px; text-align: center; min-width: 180px;">邮箱</th>
                         <th style="padding: 10px; text-align: center; min-width: 100px;">确认状态</th>
+                        <th style="padding: 10px; text-align: center; min-width: 140px;">确认时间</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for member in project.project_members.order_by('order') %}
+                    {% set project_members_list = project.project_members.all() %}
+                    {% set leader = project.team.leader %}
+                    {% set leader_in_members = project_members_list|selectattr('user_id', 'equalto', leader.id)|list %}
+                    {% if not leader_in_members %}
+                    {# 如果队长不在成员列表中，先显示队长 #}
                     <tr>
-                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
-                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ member.order }}</td>
-                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_name or member.user.real_name if member.user else '未填写' }}">{{ member.member_name or member.user.real_name if member.user else '未填写' }}</td>
-                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ member.member_work_id or member.user.work_id if member.user else '未填写' }}</td>
-                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_college or member.user.college if member.user else '未填写' }}">{{ member.member_college or member.user.college if member.user else '未填写' }}</td>
-                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_major or '未填写' }}">{{ member.member_major or '未填写' }}</td>
-                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ member.member_phone or member.user.contact_info if member.user else '未填写' }}</td>
-                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ member.member_email or member.user.email if member.user else '未填写' }}">{{ member.member_email or member.user.email if member.user else '未填写' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>1</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">第1位</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ leader.real_name }}">{{ leader.real_name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ leader.work_id }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ leader.college if leader.college else '-' }}">{{ leader.college if leader.college else '-' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="-">-</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ leader.contact_info if leader.contact_info else '-' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ leader.email if leader.email else '-' }}">{{ leader.email if leader.email else '-' }}</td>
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">
-                            {% if member.is_confirmed %}
+                            <span class="badge badge-success">已确认</span>
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">-</td>
+                    </tr>
+                    {% endif %}
+                    {% for pm in project_members_list %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index + (0 if leader_in_members else 1) }}</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">第{{ pm.order }}位</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ pm.user.real_name if pm.user else pm.member_name }}">{{ pm.user.real_name if pm.user else pm.member_name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ pm.user.work_id if pm.user else pm.member_work_id }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ pm.user.college if pm.user and pm.user.college else (pm.member_college if pm.member_college else '-') }}">{{ pm.user.college if pm.user and pm.user.college else (pm.member_college if pm.member_college else '-') }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ pm.member_major if pm.member_major else '-' }}">{{ pm.member_major if pm.member_major else '-' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ pm.user.contact_info if pm.user and pm.user.contact_info else (pm.member_phone if pm.member_phone else '-') }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ pm.user.email if pm.user and pm.user.email else (pm.member_email if pm.member_email else '-') }}">{{ pm.user.email if pm.user and pm.user.email else (pm.member_email if pm.member_email else '-') }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            {% if pm.is_confirmed %}
                                 <span class="badge badge-success">已确认</span>
                             {% else %}
                                 <span class="badge badge-warning">待确认</span>
                             {% endif %}
                         </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ pm.confirmed_at.strftime('%Y-%m-%d %H:%M') if pm.confirmed_at else '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <p>暂无队员信息</p>
-        {% endif %}
     </div>
-
-    <div class="project-detail-section">
-        <h3>指导老师信息</h3>
-        <div class="detail-row">
-            <div class="detail-label">姓名：</div>
-            <div class="detail-value">{{ project.instructor_name or '未填写' }}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">学工号：</div>
-            <div class="detail-value">{{ project.instructor_work_id or '未填写' }}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">单位：</div>
-            <div class="detail-value">{{ project.instructor_unit or '未填写' }}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">联系方式：</div>
-            <div class="detail-value">{{ project.instructor_phone or '未填写' }}</div>
-        </div>
-    </div>
-
-    {% if project.college_review_comment %}
-    <div class="project-detail-section">
-        <h3>学院审核意见</h3>
-        <p>{{ project.college_review_comment }}</p>
-    </div>
-    {% endif %}
 </div>
 
 {% if scores %}

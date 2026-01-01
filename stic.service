@@ -1,0 +1,31 @@
+[Unit]
+Description=STIC Flask Application (Gunicorn)
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+RuntimeDirectory=gunicorn
+WorkingDirectory=/var/www/stic
+Environment="PATH=/var/www/stic/venv/bin"
+ExecStart=/var/www/stic/venv/bin/gunicorn \
+    --bind 127.0.0.1:8000 \
+    --workers 4 \
+    --threads 2 \
+    --timeout 120 \
+    --access-logfile /var/www/stic/logs/access.log \
+    --error-logfile /var/www/stic/logs/error.log \
+    --log-level info \
+    --preload \
+    app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+

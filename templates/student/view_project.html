@@ -84,7 +84,7 @@
             </span>
         </div>
         {% endif %}
-        {% if project.competition.competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' and project.attachments.count() > 0 %}
+        {% if (project.competition.competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' or project.competition.competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛' or project.competition.competition_type == '"挑战杯"中国大学生创业计划大赛') and project.attachments.count() > 0 %}
         <div class="detail-row" style="flex-direction: column; align-items: flex-start; gap: var(--spacing-sm);">
             <span class="detail-label">项目附件（专家评审材料）</span>
             <div class="file-list" style="width: 100%; display: flex; flex-direction: column; gap: var(--spacing-xs);">
@@ -99,9 +99,9 @@
                     <div style="display: flex; gap: var(--spacing-xs);">
                         {% set file_path_url = attachment.file_path.replace('\\', '/') %}
                         {% if attachment.file_type.lower() in ['pdf', 'jpg', 'jpeg', 'png', 'gif'] %}
-                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank">在线预览</a>
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">在线预览</a>
                         {% else %}
-                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-secondary" target="_blank">查看</a>
+                        <a href="{{ url_for('uploaded_file', filename=file_path_url) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer">在线预览</a>
                         {% endif %}
                         <a href="{{ url_for('uploaded_file', filename=file_path_url, download='true') }}" class="btn btn-sm btn-secondary">下载</a>
                     </div>
@@ -130,6 +130,62 @@
                 {% endif %}
             </span>
         </div>
+        {% if project.is_final %}
+        <div class="detail-row">
+            <span class="detail-label">答辩顺序</span>
+            <span class="detail-value">
+                {% if project.defense_order %}
+                    <span class="badge badge-info">第{{ project.defense_order }}位</span>
+                {% elif is_leader %}
+                    {% if order_status == '未开始' %}
+                        <span class="badge badge-warning">抽取未开始</span>
+                        {% if project.competition.defense_order_start %}
+                        <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
+                            开始时间：{{ project.competition.defense_order_start.strftime('%Y-%m-%d %H:%M') }}
+                        </small>
+                        {% endif %}
+                    {% elif order_status == '可抽取' or can_draw_order %}
+                        <span class="badge badge-warning">未抽取</span>
+                        <form method="POST" action="{{ url_for('student.draw_defense_order', project_id=project.id) }}" style="display: inline-block; margin-left: 8px;" onsubmit="return confirm('确定要抽取答辩顺序吗？抽取后将无法更改。');">
+                            <button type="submit" class="btn btn-primary btn-sm">抽取答辩顺序</button>
+                        </form>
+                        {% if project.competition.defense_order_end %}
+                        <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
+                            截止时间：{{ project.competition.defense_order_end.strftime('%Y-%m-%d %H:%M') }}
+                        </small>
+                        {% endif %}
+                    {% elif order_status == '已过期' %}
+                        <span class="badge badge-error">已过期（未抽取）</span>
+                        <small style="display: block; color: var(--error-color); margin-top: 4px;">
+                            抽取时间已过，请联系管理员分配顺序
+                        </small>
+                    {% elif order_status == '已抽取' %}
+                        <span class="badge badge-info">已抽取</span>
+                    {% elif order_status == '等待队长抽取' %}
+                        <span class="badge badge-warning">未抽取</span>
+                        <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
+                            请等待队长抽取答辩顺序
+                        </small>
+                    {% else %}
+                        <span class="badge badge-warning">未设置</span>
+                        <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
+                            管理员尚未设置答辩顺序抽取时间
+                        </small>
+                        {% if project.competition.defense_order_start or project.competition.defense_order_end %}
+                        <form method="POST" action="{{ url_for('student.draw_defense_order', project_id=project.id) }}" style="display: inline-block; margin-left: 8px; margin-top: 8px;" onsubmit="return confirm('确定要抽取答辩顺序吗？抽取后将无法更改。');">
+                            <button type="submit" class="btn btn-primary btn-sm">强制抽取（管理员已设置时间）</button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <span class="badge badge-warning">未抽取</span>
+                    <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
+                        请等待队长抽取答辩顺序
+                    </small>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
         {% if project.college_review_comment %}
         <div class="detail-row">
             <span class="detail-label">学院审核意见</span>
@@ -173,9 +229,29 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for pm in project.project_members.all() %}
+                    {% set project_members_list = project.project_members.all() %}
+                    {% set leader = project.team.leader %}
+                    {% set leader_in_members = project_members_list|selectattr('user_id', 'equalto', leader.id)|list %}
+                    {% if not leader_in_members %}
+                    {# 如果队长不在成员列表中，先显示队长 #}
                     <tr>
-                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>1</strong></td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">第1位</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ leader.real_name }}">{{ leader.real_name }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ leader.work_id }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ leader.college if leader.college else '-' }}">{{ leader.college if leader.college else '-' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="-">-</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ leader.contact_info if leader.contact_info else '-' }}</td>
+                        <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ leader.email if leader.email else '-' }}">{{ leader.email if leader.email else '-' }}</td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                            <span class="badge badge-success">已确认</span>
+                        </td>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;">-</td>
+                    </tr>
+                    {% endif %}
+                    {% for pm in project_members_list %}
+                    <tr>
+                        <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index + (0 if leader_in_members else 1) }}</strong></td>
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">第{{ pm.order }}位</td>
                         <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ pm.user.real_name if pm.user else pm.member_name }}">{{ pm.user.real_name if pm.user else pm.member_name }}</td>
                         <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ pm.user.work_id if pm.user else pm.member_work_id }}</td>
@@ -273,53 +349,5 @@
 </div>
 {% endif %}
 
-{% if awards %}
-<div class="card">
-    <div class="card-header">
-        <h2>项目奖项</h2>
-    </div>
-    <div class="card-body">
-        <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
-            {% for award in awards %}
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-md); background: var(--bg-secondary); border-radius: var(--radius-sm);">
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; font-size: 1.1em; margin-bottom: var(--spacing-xs);">{{ award.award_name }}</div>
-                    <div style="color: var(--text-secondary); font-size: 0.9em;">设置时间：{{ award.created_at.strftime('%Y-%m-%d %H:%M') if award.created_at else '未知' }}</div>
-                </div>
-                {% if award.certificate_path %}
-                <div style="display: flex; gap: var(--spacing-xs);">
-                    <a href="{{ url_for('student.view_certificate', project_id=project.id, award_id=award.id) }}" class="btn btn-sm btn-secondary" target="_blank">查看证书</a>
-                    <a href="{{ url_for('student.download_certificate', project_id=project.id, award_id=award.id) }}" class="btn btn-sm btn-primary">下载证书</a>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-{% endif %}
-
-{% if scores %}
-<div class="card">
-    <div class="card-header">
-        <h2>专家建议</h2>
-    </div>
-    <div class="card-body">
-        {% for score in scores %}
-        {% if score.comment %}
-        <div class="project-detail-section" style="margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
-            <div class="detail-row">
-                <div class="detail-label">建议：</div>
-                <div class="detail-value">{{ score.comment }}</div>
-            </div>
-        </div>
-        {% endif %}
-        {% endfor %}
-        {% if not scores|selectattr('comment')|list %}
-        <p style="color: var(--text-secondary);">暂无专家建议</p>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
 {% endblock %}
 

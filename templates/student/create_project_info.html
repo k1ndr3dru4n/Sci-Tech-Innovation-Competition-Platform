@@ -143,8 +143,8 @@
             </div>
             {% endif %}
 
-            {# 中国国际大学生创新大赛"青年红色筑梦之旅"赛道的附件上传 #}
-            {% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' %}
+            {# 中国国际大学生创新大赛"青年红色筑梦之旅"赛道、"挑战杯"全国大学生课外学术科技作品竞赛和"挑战杯"中国大学生创业计划大赛的附件上传 #}
+            {% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' or competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛' or competition_type == '"挑战杯"中国大学生创业计划大赛' %}
             <div class="form-group">
                 <label class="form-label">项目附件（专家评审材料）</label>
                 <input type="file" name="attachments" id="attachments" class="form-control" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.rar">
@@ -178,7 +178,7 @@
     </div>
 </div>
 
-{% if competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' and project %}
+{% if (competition_type == '中国国际大学生创新大赛"青年红色筑梦之旅"赛道' or competition_type == '"挑战杯"全国大学生课外学术科技作品竞赛' or competition_type == '"挑战杯"中国大学生创业计划大赛') and project %}
 <script>
 function deleteAttachment(attachmentId) {
     if (confirm('确定要删除这个附件吗？')) {

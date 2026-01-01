@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}QQ群管理 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>QQ群管理</h1>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.final_competition') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.final_competition' %}active{% endif %}">校赛决赛</a>
+    <a href="{{ url_for('school_admin.defense_order') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order' %}active{% endif %}">答辩顺序</a>
+    <a href="{{ url_for('school_admin.defense_order_time') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.defense_order_time' %}active{% endif %}">答辩顺序时间</a>
+    <a href="{{ url_for('school_admin.qq_group') }}" class="tab-nav-item {% if request.endpoint == 'school_admin.qq_group' %}active{% endif %}">QQ群管理</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center; margin-bottom: var(--spacing-md);">
+    <form method="GET" action="{{ url_for('school_admin.qq_group') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">竞赛名称:</label>
+                    <select name="competition_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 150px; height: 22px; line-height: 20px;">
+                        <option value="">全部</option>
+                        {% for competition in competitions %}
+                        <option value="{{ competition.id }}" {% if selected_competition_id == competition.id %}selected{% endif %}>
+                            {{ competition.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.qq_group') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
+                </div>
+        </div>
+    </form>
+</div>
+
+{% if selected_competition %}
+<div class="card">
+    <div class="card-header">
+        <h2>{{ selected_competition.name }} - QQ群信息</h2>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('school_admin.qq_group') }}" enctype="multipart/form-data" class="auth-form">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="competition_id" value="{{ selected_competition.id }}">
+            
+            <div class="form-group">
+                <label class="form-label">竞赛名称</label>
+                <input type="text" class="form-control" value="{{ selected_competition.name }}" readonly>
+            </div>
+            
+            <div class="form-group">
+                {{ form.qq_group_number.label(class="form-label") }}
+                {{ form.qq_group_number(class="form-control") }}
+                <small class="form-text">请输入QQ群号（可选）</small>
+                {% if form.qq_group_number.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.qq_group_number.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.qq_group_qrcode.label(class="form-label") }}
+                {{ form.qq_group_qrcode(class="form-control") }}
+                <small class="form-text">上传QQ群二维码图片（支持 jpg, png, gif 格式，可选）</small>
+                {% if form.qq_group_qrcode.errors %}
+                    <div class="form-error" role="alert">
+                        {% for error in form.qq_group_qrcode.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if selected_competition.qq_group_qrcode %}
+                <div style="margin-top: 10px;">
+                    <p>当前二维码：</p>
+                    <img src="{{ url_for('uploaded_file', filename=selected_competition.qq_group_qrcode.replace('\\', '/')) }}" alt="QQ群二维码" style="max-width: 300px; max-height: 300px; border: 1px solid var(--border-color); padding: 10px; background: white;">
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-block">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% elif selected_competition_id %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>未找到指定的竞赛</p>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <p>请选择竞赛以查看和编辑QQ群信息</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

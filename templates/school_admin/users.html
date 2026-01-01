@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 - 校级管理员{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>用户管理</h1>
+    <a href="{{ url_for('school_admin.create_user') }}" class="btn btn-primary">添加用户</a>
+</div>
+
+<div class="tab-nav">
+    <a href="{{ url_for('school_admin.users') }}" class="tab-nav-item active">用户管理</a>
+    <a href="{{ url_for('school_admin.roles') }}" class="tab-nav-item">角色管理</a>
+</div>
+
+<div class="card" style="padding: 4px; display: flex; align-items: center;">
+    <form method="GET" action="{{ url_for('school_admin.users') }}" class="filter-form" style="margin: 0 !important; padding: 0 !important; height: 30px !important; display: flex; align-items: center; box-sizing: border-box; overflow: hidden;">
+        <div style="display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; height: 24px;">
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="user_name" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">姓名:</label>
+                    <input type="text" id="user_name" name="user_name" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 100px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('user_name', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="work_id" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">学工号:</label>
+                    <input type="text" id="work_id" name="work_id" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 100px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('work_id', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="role" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">角色:</label>
+                    <select id="role" name="role" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 120px; height: 22px; line-height: 20px;">
+                        <option value="">全部</option>
+                        <option value="student" {% if request.args.get('role') == 'student' %}selected{% endif %}>学生</option>
+                        <option value="college_admin" {% if request.args.get('role') == 'college_admin' %}selected{% endif %}>学院管理员</option>
+                        <option value="school_admin" {% if request.args.get('role') == 'school_admin' %}selected{% endif %}>校级管理员</option>
+                        <option value="judge" {% if request.args.get('role') == 'judge' %}selected{% endif %}>校外评委</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 100%; margin: 0 !important;">
+                    <label for="college" class="form-label" style="font-size: 0.875rem; margin: 0; white-space: nowrap; line-height: 24px;">学院:</label>
+                    <input type="text" id="college" name="college" class="form-control" style="padding: 1px 4px; font-size: 0.875rem; width: 100px; height: 22px; line-height: 20px;"
+                           value="{{ request.args.get('college', '') }}" placeholder="">
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: 4px; flex-shrink: 0; height: 100%; align-items: center; margin: 0 !important;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">搜索</button>
+                    <a href="{{ url_for('school_admin.users') }}" class="btn btn-secondary" style="padding: 1px 8px; font-size: 0.875rem; height: 22px; line-height: 20px;">重置</a>
+                </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    {% if users %}
+    <div class="table-container" style="overflow-x: auto; overflow-y: visible;">
+        <table style="width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0;">
+            <thead>
+                <tr>
+                    <th style="padding: 10px; text-align: center; min-width: 60px;">序号</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">学工号/用户名</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">姓名</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">角色</th>
+                    <th style="padding: 10px; text-align: center; min-width: 180px;">学院/单位</th>
+                    <th style="padding: 10px; text-align: center; min-width: 120px;">联系方式</th>
+                    <th style="padding: 10px; text-align: center; min-width: 140px;">最后登录时间</th>
+                    <th style="padding: 10px; text-align: center; min-width: 100px;">账户状态</th>
+                    <th style="padding: 10px; text-align: center; min-width: 150px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;"><strong>{{ loop.index }}</strong></td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {{ user.work_id or user.username or '未设置' }}
+                    </td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ user.real_name }}">{{ user.real_name }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if user.role == 'student' %}
+                            <span class="badge badge-info">学生</span>
+                        {% elif user.role == 'college_admin' %}
+                            <span class="badge badge-warning">学院管理员</span>
+                        {% elif user.role == 'school_admin' %}
+                            <span class="badge badge-success">校级管理员</span>
+                        {% elif user.role == 'judge' %}
+                            <span class="badge badge-judge">校外评委</span>
+                        {% else %}
+                            <span class="badge">{{ user.role }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 10px; text-align: center;" title="{{ user.college or user.unit or '未设置' }}">
+                        {{ user.college or user.unit or '未设置' }}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">{{ user.contact_info or '未设置' }}</td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if user.last_login %}
+                            {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            <span style="color: var(--text-secondary);">从未登录</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        {% if user.is_active %}
+                            <span class="badge badge-success">正常</span>
+                        {% else %}
+                            <span class="badge badge-error">已禁用</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap; padding: 10px; text-align: center;">
+                        <div style="display: inline-flex; gap: 4px; align-items: center; position: relative;">
+                            <a href="{{ url_for('school_admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary" style="white-space: nowrap;">编辑</a>
+                            <div style="position: relative;">
+                                <button type="button" class="btn btn-sm btn-secondary dropdown-btn" data-user-id="{{ user.id }}" onclick="toggleDropdown({{ user.id }}, event);" style="white-space: nowrap;">更多 ▼</button>
+                                <div id="dropdown-{{ user.id }}" class="dropdown-menu" style="display: none; position: fixed; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 99999; min-width: 120px; overflow: hidden;">
+                                    <a href="#" onclick="event.preventDefault(); resetPassword({{ user.id }}); return false;" style="display: block; padding: 8px 12px; color: #333; text-decoration: none; border-bottom: 1px solid #eee; cursor: pointer;">重置密码</a>
+                                    <a href="#" onclick="event.preventDefault(); changePassword({{ user.id }}); return false;" style="display: block; padding: 8px 12px; color: #333; text-decoration: none; border-bottom: 1px solid #eee; cursor: pointer;">修改密码</a>
+                                    <a href="#" onclick="event.preventDefault(); deleteUser({{ user.id }}, '{{ user.real_name|replace("'", "\\'") }}'); return false;" style="display: block; padding: 8px 12px; color: #d32f2f; text-decoration: none; cursor: pointer;">删除</a>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>当前没有找到符合条件的用户</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.dropdown-menu {
+    background: white !important;
+}
+.dropdown-menu a:hover {
+    background-color: #f5f5f5;
+}
+.dropdown-menu a:first-child:hover {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+.dropdown-menu a:last-child:hover {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+</style>
+
+<script>
+function toggleDropdown(userId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    // 关闭所有其他下拉菜单
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu.id !== 'dropdown-' + userId) {
+            menu.style.display = 'none';
+        }
+    });
+    
+    // 切换当前下拉菜单
+    const menu = document.getElementById('dropdown-' + userId);
+    const button = event ? event.target : document.querySelector('button[data-user-id="' + userId + '"]');
+    
+    if (menu && button) {
+        const isVisible = menu.style.display === 'block' || menu.style.display === '';
+        menu.style.display = isVisible ? 'none' : 'block';
+        
+        // 如果显示，使用 fixed 定位并计算位置
+        if (!isVisible) {
+            const buttonRect = button.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const menuHeight = 120; // 大约的下拉菜单高度
+            
+            // 计算位置
+            let top = buttonRect.bottom + 4;
+            let right = window.innerWidth - buttonRect.right;
+            
+            // 如果下拉菜单会超出视口底部，则向上显示
+            if (top + menuHeight > viewportHeight) {
+                top = buttonRect.top - menuHeight - 4;
+            }
+            
+            menu.style.top = top + 'px';
+            menu.style.right = right + 'px';
+            menu.style.left = 'auto';
+        }
+    }
+}
+
+// 点击外部关闭下拉菜单
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.dropdown-menu') && !event.target.closest('.dropdown-btn')) {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+function resetPassword(userId) {
+    if (confirm('确定要重置该用户的密码为默认密码 "swjtu12345" 吗？')) {
+        fetch('{{ url_for("school_admin.reset_user_password") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('密码已重置为默认密码：swjtu12345');
+                location.reload();
+            } else {
+                alert('操作失败：' + (data.message || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+
+function changePassword(userId) {
+    const newPassword = prompt('请输入新密码（至少6位）：');
+    if (newPassword && newPassword.length >= 6) {
+        fetch('{{ url_for("school_admin.change_user_password") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId, new_password: newPassword })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('密码修改成功');
+                location.reload();
+            } else {
+                alert('操作失败：' + (data.message || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    } else if (newPassword) {
+        alert('密码长度至少为6位');
+    }
+}
+
+function deleteUser(userId, userName) {
+    if (confirm('确定要删除用户 "' + userName + '" 吗？此操作不可恢复！')) {
+        fetch('{{ url_for("school_admin.delete_user") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('用户已删除');
+                location.reload();
+            } else {
+                alert('操作失败：' + (data.message || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+</script>
+{% endblock %}
+
