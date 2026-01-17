@@ -25,7 +25,7 @@ class Config:
     POSTS_PER_PAGE = 20
     
     # AI脱敏识别配置
-    QWEN_API_KEY = os.environ.get('QWEN_API_KEY') or 'sk-c721f79442294bc88297e5404538571e'  # 千问API密钥
+    QWEN_API_KEY = os.environ.get('QWEN_API_KEY') or ''  # 千问API密钥
     QWEN_API_BASE_URL = os.environ.get('QWEN_API_BASE_URL') or 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation'  # 文本生成API
     QWEN_VL_API_BASE_URL = os.environ.get('QWEN_VL_API_BASE_URL') or 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation'  # 视觉模型API
     SENSITIVE_KEYWORDS = ['西南交通大学']  # 敏感关键词列表，可根据需要修改
